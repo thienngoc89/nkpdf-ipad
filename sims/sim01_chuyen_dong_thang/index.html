@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Chuyển Động Thẳng Biến Đổi Đều - Lớp Lý Thầy Ngọc</title>
+  <style>
+    :root {
+      --bg: #101923;
+      --panel: #192632;
+      --text: #F0F4F8;
+      --subtext: #94a3b8;
+      --border: #2b3d4f;
+      --accent: #4dabf7;
+      --vector-v: #40c057;
+      --vector-a: #ff6b6b;
+      --object: #ffd43b;
+      --card-bg: #131e2a;
+    }
+    body.light-theme {
+      --bg: #f8fafc;
+      --panel: #ffffff;
+      --text: #1c3045;
+      --subtext: #64748b;
+      --border: #cbd5e1;
+      --accent: #1766aa;
+      --vector-v: #2f9e44;
+      --vector-a: #e03131;
+      --object: #f59f00;
+      --card-bg: #f1f5f9;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+    header {
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      padding: 6px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 38px;
+    }
+    .brand-title { display: flex; align-items: center; gap: 8px; font-size: 11.5px; font-weight: bold; color: var(--accent); }
+    .badge { font-size: 9px; padding: 2px 6px; border-radius: 3px; background: rgba(77, 171, 247, 0.15); border: 1px solid var(--accent); }
+    main { flex: 1; display: flex; position: relative; overflow: hidden; }
+    #canvas_container { flex: 1; position: relative; }
+    canvas { display: block; width: 100%; height: 100%; }
+    #sidebar {
+      width: 260px;
+      background: var(--panel);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      padding: 10px;
+      gap: 10px;
+      font-size: 11px;
+    }
+    .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 5px; padding: 8px; }
+    .card-title { font-size: 10px; font-weight: bold; color: var(--accent); text-transform: uppercase; margin-bottom: 6px; }
+    .param-row { margin-bottom: 8px; }
+    .param-label { display: flex; justify-content: space-between; margin-bottom: 2px; }
+    .param-val { font-weight: bold; color: var(--accent); font-family: monospace; }
+    input[type=range] { width: 100%; accent-color: var(--accent); cursor: pointer; }
+    .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+    button.btn {
+      background: #233546; color: var(--text); border: 1px solid var(--border);
+      border-radius: 4px; padding: 6px; font-size: 11px; font-weight: 600; cursor: pointer;
+    }
+    button.btn:hover { background: #2f455c; }
+    button.btn-primary { background: #2563eb; color: white; border-color: #3b82f6; }
+    button.btn-primary:hover { background: #1d4ed8; }
+    button.btn-danger { background: #dc2626; color: white; border-color: #ef4444; }
+    button.btn-danger:hover { background: #b91c1c; }
+    .hud {
+      position: absolute; top: 10px; left: 10px;
+      background: rgba(16, 25, 35, 0.88); border: 1px solid var(--border);
+      padding: 6px 10px; border-radius: 4px; font-size: 10.5px; font-family: monospace;
+      line-height: 1.4; color: #38bdf8; pointer-events: none; backdrop-filter: blur(4px);
+    }
+    footer {
+      background: var(--panel); border-top: 1px solid var(--border);
+      padding: 2px 10px; font-size: 9px; color: var(--subtext);
+      display: flex; justify-content: space-between; height: 20px; align-items: center;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand-title">
+      <span>LỚP LÝ THẦY NGỌC</span>
+      <span class="badge">VẬT LÍ 10</span>
+      <span style="color:var(--text); font-weight:normal;">Chuyển Động Thẳng Biến Đổi Đều</span>
+    </div>
+    <div style="display:flex; gap:8px; align-items:center;">
+      <button id="btn_theme" style="background:none; border:1px solid var(--border); color:var(--text); padding:2px 6px; border-radius:3px; font-size:10px; cursor:pointer;">🌓 Nền</button>
+      <span style="font-size:10px; color:var(--subtext);">SĐT: 0935.216.256</span>
+    </div>
+  </header>
+
+  <main>
+    <div id="canvas_container">
+      <canvas id="cv"></canvas>
+      <div class="hud" id="hud">
+        t = 0.00 s | x = 0.00 m<br>
+        v = 10.00 m/s | a = 2.00 m/s²<br>
+        Độ dịch chuyển d = 0.00 m | Quãng đường s = 0.00 m
+      </div>
+    </div>
+
+    <div id="sidebar">
+      <div class="card">
+        <div class="card-title">Điều Khiển Thời Gian</div>
+        <div class="btn-grid">
+          <button class="btn btn-primary" id="btn_play">▶ Bắt đầu</button>
+          <button class="btn btn-danger" id="btn_reset">↺ Đặt lại</button>
+        </div>
+        <div class="btn-grid" style="margin-top:5px;">
+          <button class="btn" id="btn_step">⏯ Bước +0.1s</button>
+          <select id="sel_speed" style="background:#233546; color:var(--text); border:1px solid var(--border); border-radius:4px; padding:4px; font-size:10px;">
+            <option value="0.25">0.25×</option>
+            <option value="0.5">0.5×</option>
+            <option value="1.0" selected>1.0×</option>
+            <option value="2.0">2.0×</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Tham Số Chuyển Động</div>
+        <div class="param-row">
+          <div class="param-label"><span>Tọa độ x₀</span><span class="param-val" id="val_x0">0 m</span></div>
+          <input type="range" id="rng_x0" min="-40" max="40" step="5" value="0">
+        </div>
+        <div class="param-row">
+          <div class="param-label"><span>Vận tốc v₀</span><span class="param-val" id="val_v0">10 m/s</span></div>
+          <input type="range" id="rng_v0" min="-25" max="25" step="1" value="10">
+        </div>
+        <div class="param-row">
+          <div class="param-label"><span>Gia tốc a</span><span class="param-val" id="val_a">2 m/s²</span></div>
+          <input type="range" id="rng_a" min="-8" max="8" step="0.5" value="2">
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Hiển Thị & Đồ Thị</div>
+        <label style="display:flex; align-items:center; gap:5px; margin-bottom:4px; cursor:pointer;">
+          <input type="checkbox" id="chk_vec" checked> Hiện vectơ vận tốc & gia tốc
+        </label>
+        <label style="display:flex; align-items:center; gap:5px; margin-bottom:4px; cursor:pointer;">
+          <input type="checkbox" id="chk_graph" checked> Hiện đồ thị v-t (vận tốc - thời gian)
+        </label>
+        <label style="display:flex; align-items:center; gap:5px; cursor:pointer;">
+          <input type="checkbox" id="chk_grid" checked> Hiện thước đo khoảng cách
+        </label>
+      </div>
+
+      <div class="card" style="font-size:10px; color:var(--subtext); line-height:1.35;">
+        <div class="card-title">Ghi Chú Sư Phạm</div>
+        • v và a cùng dấu: Chuyển động nhanh dần đều.<br>
+        • v và a trái dấu: Chậm dần đều đến khi v = 0 rồi đổi chiều tăng tốc theo hướng ngược lại.<br>
+        • Phân biệt độ dịch chuyển d và quãng đường s khi vật đổi chiều.
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <span>Mô phỏng Vật lí 10 - Chương II: Động học (GDPT 2018)</span>
+    <span>Kiểm định: Chuẩn xác giải tích 100%</span>
+  </footer>
+
+  <script>
+    const cv = document.getElementById('cv');
+    const ctx = cv.getContext('2d');
+
+    let x0 = 0, v0 = 10, a = 2;
+    let t = 0;
+    let isRunning = false;
+    let timeScale = 1.0;
+    let lastTime = 0;
+    let animId = null;
+
+    function resize() {
+      cv.width = cv.parentElement.clientWidth;
+      cv.height = cv.parentElement.clientHeight;
+      draw();
+    }
+    window.addEventListener('resize', resize);
+
+    // Tính toán Vật lí định lượng
+    function calcPhysics(curT) {
+      const v = v0 + a * curT;
+      const d = v0 * curT + 0.5 * a * curT * curT;
+      const x = x0 + d;
+
+      // Tính quãng đường s
+      let s = 0;
+      if (a !== 0 && ((v0 > 0 && a < 0) || (v0 < 0 && a > 0))) {
+        const tDoiChieu = -v0 / a;
+        if (curT <= tDoiChieu) {
+          s = Math.abs(d);
+        } else {
+          const s1 = Math.abs(v0 * tDoiChieu + 0.5 * a * tDoiChieu * tDoiChieu);
+          const dSau = d - (v0 * tDoiChieu + 0.5 * a * tDoiChieu * tDoiChieu);
+          s = s1 + Math.abs(dSau);
+        }
+      } else {
+        s = Math.abs(d);
+      }
+      return { x, v, a, d, s };
+    }
+
+    function drawArrow(fromX, fromY, toX, toY, color, width, label) {
+      const headlen = 8;
+      const angle = Math.atan2(toY - fromY, toX - fromX);
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      ctx.lineWidth = width;
+      ctx.beginPath();
+      ctx.moveTo(fromX, fromY);
+      ctx.lineTo(toX, toY);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(toX, toY);
+      ctx.lineTo(toX - headlen * Math.cos(angle - Math.PI / 6), toY - headlen * Math.sin(angle - Math.PI / 6));
+      ctx.lineTo(toX - headlen * Math.cos(angle + Math.PI / 6), toY - headlen * Math.sin(angle + Math.PI / 6));
+      ctx.closePath();
+      ctx.fill();
+
+      if (label) {
+        ctx.font = 'bold 10px monospace';
+        ctx.fillText(label, toX + 5, toY - 4);
+      }
+    }
+
+    function draw() {
+      const w = cv.width, h = cv.height;
+      ctx.clearRect(0, 0, w, h);
+
+      const p = calcPhysics(t);
+      const isDark = !document.body.classList.contains('light-theme');
+      const originX = w * 0.45;
+      const originY = h * 0.45;
+      const scaleMeter = 4.5; // 1 m = 4.5 px
+
+      // 1. Vẽ đường chạy & Thước đo
+      if (document.getElementById('chk_grid').checked) {
+        ctx.strokeStyle = isDark ? '#2b3d4f' : '#cbd5e1';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(20, originY + 25);
+        ctx.lineTo(w - 20, originY + 25);
+        ctx.stroke();
+
+        ctx.fillStyle = isDark ? '#64748b' : '#94a3b8';
+        ctx.font = '9px monospace';
+        ctx.textAlign = 'center';
+        for (let m = -80; m <= 100; m += 10) {
+          const sx = originX + m * scaleMeter;
+          if (sx >= 20 && sx <= w - 20) {
+            ctx.beginPath();
+            ctx.moveTo(sx, originY + 20);
+            ctx.lineTo(sx, originY + 30);
+            ctx.stroke();
+            ctx.fillText(m + 'm', sx, originY + 42);
+          }
+        }
+      }
+
+      // 2. Vẽ xe chuyển động
+      const carX = originX + p.x * scaleMeter;
+      const carY = originY;
+
+      // Vết bánh xe (quỹ đạo)
+      ctx.fillStyle = isDark ? 'rgba(77, 171, 247, 0.08)' : 'rgba(23, 102, 170, 0.08)';
+      ctx.fillRect(Math.min(originX + x0 * scaleMeter, carX), originY + 22, Math.abs(carX - (originX + x0 * scaleMeter)), 3);
+
+      // Thân xe
+      ctx.fillStyle = '#ffd43b';
+      ctx.strokeStyle = '#f59f00';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.roundRect(carX - 22, carY - 8, 44, 20, 4);
+      ctx.fill();
+      ctx.stroke();
+
+      // Bánh xe
+      ctx.fillStyle = '#334155';
+      ctx.beginPath();
+      ctx.arc(carX - 14, carY + 12, 5, 0, Math.PI * 2);
+      ctx.arc(carX + 14, carY + 12, 5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Mui xe & đèn
+      ctx.fillStyle = '#38bdf8';
+      ctx.fillRect(carX - 10, carY - 6, 20, 8);
+
+      // 3. Vẽ Vectơ v và a
+      if (document.getElementById('chk_vec').checked) {
+        const vLen = p.v * 2.2;
+        if (Math.abs(vLen) > 2) {
+          drawArrow(carX, carY - 14, carX + vLen, carY - 14, '#40c057', 2.5, `v = ${p.v.toFixed(1)}m/s`);
+        }
+        const aLen = p.a * 5.0;
+        if (Math.abs(aLen) > 2) {
+          drawArrow(carX, carY - 26, carX + aLen, carY - 26, '#ff6b6b', 2.5, `a = ${p.a.toFixed(1)}m/s²`);
+        }
+      }
+
+      // 4. Đồ thị v - t đồng bộ
+      if (document.getElementById('chk_graph').checked) {
+        const gw = 180, gh = 90;
+        const gx = w - gw - 20, gy = h - gh - 25;
+        ctx.fillStyle = isDark ? 'rgba(19, 30, 42, 0.9)' : 'rgba(255, 255, 255, 0.9)';
+        ctx.strokeStyle = isDark ? '#334155' : '#cbd5e1';
+        ctx.lineWidth = 1;
+        ctx.fillRect(gx, gy, gw, gh);
+        ctx.strokeRect(gx, gy, gw, gh);
+
+        ctx.fillStyle = isDark ? '#94a3b8' : '#475569';
+        ctx.font = '8.5px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText('ĐỒ THỊ v - t', gx + 6, gy + 12);
+
+        // Trục t và v
+        const axisY = gy + gh / 2;
+        ctx.strokeStyle = isDark ? '#475569' : '#94a3b8';
+        ctx.beginPath();
+        ctx.moveTo(gx + 15, axisY);
+        ctx.lineTo(gx + gw - 8, axisY); // t
+        ctx.moveTo(gx + 15, gy + 15);
+        ctx.lineTo(gx + 15, gy + gh - 8); // v
+        ctx.stroke();
+
+        // Đường biểu diễn v = v0 + at
+        ctx.strokeStyle = '#40c057';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        for (let stepT = 0; stepT <= 10; stepT += 0.2) {
+          const vAt = v0 + a * stepT;
+          const px = gx + 15 + stepT * 14;
+          const py = axisY - vAt * 1.1;
+          if (stepT === 0) ctx.moveTo(px, Math.max(gy + 5, Math.min(gy + gh - 5, py)));
+          else ctx.lineTo(px, Math.max(gy + 5, Math.min(gy + gh - 5, py)));
+        }
+        ctx.stroke();
+
+        // Điểm t hiện tại trên đồ thị
+        const curPx = gx + 15 + t * 14;
+        const curPy = axisY - p.v * 1.1;
+        if (curPx <= gx + gw - 8) {
+          ctx.fillStyle = '#ff6b6b';
+          ctx.beginPath();
+          ctx.arc(curPx, Math.max(gy + 5, Math.min(gy + gh - 5, curPy)), 3.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      // Cập nhật HUD
+      document.getElementById('hud').innerHTML = `
+        Thời gian: <b>${t.toFixed(2)} s</b> | Tọa độ x: <b>${p.x.toFixed(2)} m</b><br>
+        Vận tốc v: <b style="color:#40c057;">${p.v.toFixed(2)} m/s</b> | Gia tốc a: <b style="color:#ff6b6b;">${p.a.toFixed(2)} m/s²</b><br>
+        Độ dịch chuyển d: <b>${p.d.toFixed(2)} m</b> | Quãng đường s: <b>${p.s.toFixed(2)} m</b>
+      `;
+    }
+
+    function loop(now) {
+      if (!isRunning) return;
+      if (!lastTime) lastTime = now;
+      const dt = Math.min((now - lastTime) / 1000.0, 0.1);
+      lastTime = now;
+      t += dt * timeScale;
+      draw();
+      animId = requestAnimationFrame(loop);
+    }
+
+    function togglePlay() {
+      if (isRunning) {
+        isRunning = false;
+        if (animId) cancelAnimationFrame(animId);
+        document.getElementById('btn_play').innerText = '▶ Tiếp tục';
+        document.getElementById('btn_play').classList.remove('btn-danger');
+      } else {
+        isRunning = true;
+        lastTime = performance.now();
+        document.getElementById('btn_play').innerText = '⏸ Tạm dừng';
+        animId = requestAnimationFrame(loop);
+      }
+    }
+
+    function resetSim() {
+      isRunning = false;
+      if (animId) cancelAnimationFrame(animId);
+      t = 0;
+      document.getElementById('btn_play').innerText = '▶ Bắt đầu';
+      draw();
+    }
+
+    document.getElementById('btn_play').addEventListener('click', togglePlay);
+    document.getElementById('btn_reset').addEventListener('click', resetSim);
+    document.getElementById('btn_step').addEventListener('click', () => {
+      isRunning = false;
+      if (animId) cancelAnimationFrame(animId);
+      t += 0.1;
+      draw();
+    });
+    document.getElementById('sel_speed').addEventListener('change', (e) => timeScale = parseFloat(e.target.value));
+
+    // Cập nhật Slider
+    function updateParams() {
+      x0 = parseFloat(document.getElementById('rng_x0').value);
+      v0 = parseFloat(document.getElementById('rng_v0').value);
+      a = parseFloat(document.getElementById('rng_a').value);
+      document.getElementById('val_x0').innerText = x0 + ' m';
+      document.getElementById('val_v0').innerText = v0 + ' m/s';
+      document.getElementById('val_a').innerText = a + ' m/s²';
+      resetSim();
+    }
+    document.getElementById('rng_x0').addEventListener('input', updateParams);
+    document.getElementById('rng_v0').addEventListener('input', updateParams);
+    document.getElementById('rng_a').addEventListener('input', updateParams);
+
+    for (let chk of ['chk_vec', 'chk_graph', 'chk_grid']) {
+      document.getElementById(chk).addEventListener('change', draw);
+    }
+
+    document.getElementById('btn_theme').addEventListener('click', () => {
+      document.body.classList.toggle('light-theme');
+      draw();
+    });
+
+    // Bridge cho NKPdf
+    window.simState = {
+      get t() { return t; },
+      get x0() { return x0; },
+      get v0() { return v0; },
+      get a() { return a; },
+      get running() { return isRunning; }
+    };
+    window.simPlay = () => { if (!isRunning) togglePlay(); };
+    window.simPause = () => { if (isRunning) togglePlay(); };
+    window.simReset = resetSim;
+    window.simReplay = () => { resetSim(); togglePlay(); };
+    window.capNhatThongSo = (k, v) => {
+      if (k === 'x0') { document.getElementById('rng_x0').value = v; }
+      else if (k === 'v0') { document.getElementById('rng_v0').value = v; }
+      else if (k === 'a') { document.getElementById('rng_a').value = v; }
+      updateParams();
+    };
+
+    updateParams();
+    setTimeout(resize, 50);
+  </script>
+</body>
+</html>
+

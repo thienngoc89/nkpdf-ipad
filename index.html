@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="NKPDF 2.9" />
+  <meta name="theme-color" content="#1D58B4" />
+  <title>NKPDF 2.9 — Lớp Lý Thầy Ngọc (iPad &amp; Apple Pencil Edition)</title>
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="icon" type="image/svg+xml" href="./icons/icon.svg" />
+  <link rel="apple-touch-icon" href="./icons/icon.svg" />
+  <link rel="stylesheet" href="./vendor/katex.min.css" />
+  <link rel="stylesheet" href="./styles.css?v=20261121.170055" />
+  <script src="./vendor/pdf.min.js"></script>
+  <script src="./vendor/katex.min.js"></script>
+  <script src="./icons_nkpdf.js?v=20261121.170055"></script>
+</head>
+<body>
+  <input type="file" id="pdf-file-input" accept="application/pdf,.pdf" multiple hidden />
+  <input type="file" id="img-file-input" accept="image/*" hidden />
+
+  <!-- 1. THANH TRÊN (#ThanhTren — ĐÃ CHỪA SAFE-AREA CHO THANH TRẠNG THÁI IPADOS ĐỂ BẤM NHẠY 100%) -->
+  <header id="ThanhTren">
+    <div class="top-left">
+      <div class="app-brand" title="NKPDF 2.9 — Lớp Lý Thầy Ngọc (Bản iPad Siêu Nhẹ)">
+        <span id="TenApp">NK</span><span id="TenAppVang">PDF</span>
+        <span id="NhanPhienBan">2.9</span>
+      </div>
+      <nav id="TabRibbon">
+        <button class="ribbon-tab active" data-rtab="viet_ve">✏️ Viết &amp; Vẽ</button>
+        <button class="ribbon-tab" data-rtab="xem_pdf">📖 Đọc PDF</button>
+      </nav>
+    </div>
+
+    <div class="top-favorites">
+      <div id="TopDynamicTools" class="top-dynamic-tools">
+        <button class="fav-btn" data-topid="but" data-toplabel="✏️ Bút vẽ" data-tool="but" title="Bút vẽ siêu mượt Smooth Ink V2 (P)">
+          <span class="ic" data-icon="but" data-dark="1"></span><span>Bút vẽ</span>
+        </button>
+        <button class="fav-btn" data-topid="tay_net" data-toplabel="🧹 Tẩy nét" data-tool="tay_net" title="Tẩy nét bút viết tay">
+          <span class="ic" data-icon="tay_net" data-dark="1"></span><span>Tẩy</span>
+        </button>
+        <button class="fav-btn fav-green" data-topid="bang_xanh" data-toplabel="🟢 Bảng viết phấn xanh" id="top-btn-bang-xanh" title="Mở Bảng viết phấn xanh ô ly độc lập (Phím tắt: B)">
+          <span>🟢 Bảng viết</span>
+        </button>
+        <button class="fav-btn" data-topid="dung_hinh" data-toplabel="📐 Thanh Dựng hình" id="top-btn-dung-hinh" title="Mở / Đóng Thanh công cụ DỰNG HÌNH ma trận 24 công cụ (Shift+G)">
+          <span>📐 Dựng hình</span>
+        </button>
+        <button class="fav-btn" data-topid="casio" data-toplabel="🧮 Máy tính Casio" id="top-btn-casio" title="Mở máy tính khoa học Casio FX-580VN X">
+          <span class="ic" data-icon="may_tinh" data-dark="1"></span><span>Casio</span>
+        </button>
+        <button class="fav-btn" data-topid="kho_hinh" data-toplabel="🖼️ Hình Toán - Lý" id="top-btn-kho-hinh" title="Kho hình Toán - Lý mẫu &amp; Chèn hình (Phím tắt: K)">
+          <span class="ic" data-icon="kho_hinh" data-dark="1"></span><span>Hình Toán-Lý</span>
+        </button>
+        <button class="fav-btn active" data-topid="hut_diem" data-toplabel="🧲 Hút điểm" id="top-btn-hut-diem" title="Bật / Tắt Hút điểm đầu mút và đỉnh hình học">
+          <span>🧲 Hút điểm</span>
+        </button>
+        <button class="fav-btn" data-topid="hut_goc" data-toplabel="📐 Hút góc" id="top-btn-hut-goc" title="Bật / Tắt Hút góc chuẩn (0°, 30°, 45°, 60°, 90°)">
+          <span>📐 Hút góc</span>
+        </button>
+        <button class="fav-btn" data-topid="thuoc_ke" data-toplabel="📏 Thước kẻ xoay 360°" id="top-btn-ruler" title="Bật / Tắt Thước kẻ xoay 360° có hút nét bút dọc cạnh thước (Phím U)">
+          <span>📏 Thước kẻ</span>
+        </button>
+        <select id="top-reading-select" data-topid="che_do_doc" data-toplabel="☀️ Chế độ đọc dịu mắt" class="top-read-select" title="Chế độ đọc dịu mắt cho PDF">
+          <option value="white">☀️ Nền trắng</option>
+          <option value="cream">📜 Giấy kem</option>
+          <option value="blue">📘 Xanh dịu</option>
+          <option value="board">🟩 Bảng xanh</option>
+          <option value="night">🌙 Ban đêm</option>
+        </select>
+        <button class="fav-btn fav-present" data-topid="trinh_chieu" data-toplabel="📺 Trình chiếu (Ẩn công cụ / TV 16:9)" id="top-btn-present" title="Chế độ Trình chiếu sạch không công cụ &amp; Xuất màn hình TV 16:9 không viền đen">
+          <span>📺 Trình chiếu</span>
+        </button>
+        <button class="fav-btn fav-install" data-topid="cai_ipad" data-toplabel="📲 Cài iPad (Offline)" id="top-btn-install-pwa" title="Hướng dẫn cài NKPDF 2.9 lên Màn hình chính iPad &amp; Kiểm tra 100% Offline">
+          <span>📲 Cài iPad</span>
+        </button>
+        <button class="fav-btn active" data-topid="thanh_doc" data-toplabel="▣ Bật/Tắt Thanh dọc" id="top-btn-thanh-doc" title="Đóng / Mở Thanh công cụ dọc bên trái (Phím F9)">
+          <span>Thanh dọc</span>
+        </button>
+      </div>
+      <button class="fav-btn fav-gear" id="top-btn-sort" title="⚙ Sắp xếp thứ tự &amp; Ẩn/Hiện công cụ trên Thanh trên cùng">
+        <span>⚙</span>
+      </button>
+      <button class="fav-btn" id="top-btn-collapse-ribbon" title="Thu gọn / Mở rộng thanh Ribbon">
+        <span id="collapse-ribbon-icon">▲</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- 2. KHUNG RIBBON TINH GỌN CHO IPAD (#Ribbon — HỖ TRỢ ⚙ TỰ DO SẮP XẾP & ẨN/HIỆN TỪNG CÔNG CỤ) -->
+  <section id="Ribbon">
+    <!-- TAB 0: VIẾT, VẼ & DỰNG HÌNH -->
+    <div class="ribbon-page active" id="rpage-viet_ve">
+      <div id="RibbonDynamicTools" class="ribbon-dynamic-tools">
+        <button class="rbtn" data-rbid="mo_pdf" data-rblabel="📂 Mở tệp PDF" id="rb-open"><span class="ic" data-icon="mo"></span><span>Mở PDF</span></button>
+        <button class="rbtn" data-rbid="de_mau" data-rblabel="📄 Mở Đề mẫu" id="rb-sample"><span class="ic" data-icon="pdf"></span><span>Đề mẫu</span></button>
+        <button class="rbtn active" data-rbid="but" data-rblabel="✏️ Bút viết siêu mượt" data-tool="but"><span class="ic" data-icon="but"></span><span>Bút viết</span></button>
+        <button class="rbtn" data-rbid="to_sang" data-rblabel="🖍️ Bút Tô sáng" data-tool="to_sang"><span class="ic" data-icon="to_sang"></span><span>Tô sáng</span></button>
+        <button class="rbtn" data-rbid="chon" data-rblabel="👆 Chọn / Sửa đối tượng" data-tool="chon"><span class="ic" data-icon="chon"></span><span>Chọn/Sửa</span></button>
+        <button class="rbtn" data-rbid="tay" data-rblabel="✋ Bàn tay Kéo trang" data-tool="tay"><span class="ic" data-icon="tay"></span><span>Kéo trang</span></button>
+        <button class="rbtn" data-rbid="tay_net" data-rblabel="🧹 Tẩy nét bút" data-tool="tay_net"><span class="ic" data-icon="tay_net"></span><span>Tẩy nét</span></button>
+        <button class="rbtn" data-rbid="xoa_vung_but" data-rblabel="⌧ Quét xoá nét bút" data-tool="xoa_vung_but"><span class="ic" data-icon="xoa_vung_but"></span><span>Quét xoá</span></button>
+        <button class="rbtn" data-rbid="xoa_vung" data-rblabel="⬜ Xoá vùng che chữ" data-tool="xoa_vung"><span class="ic" data-icon="xoa_vung"></span><span>Xoá vùng</span></button>
+        <button class="rbtn" data-rbid="duong" data-rblabel="╱ Vẽ Đoạn thẳng" data-tool="duong"><span class="ic" data-icon="duong"></span><span>Đoạn thẳng</span></button>
+        <button class="rbtn" data-rbid="mui_ten" data-rblabel="↗ Vẽ Mũi tên" data-tool="mui_ten"><span class="ic" data-icon="mui_ten"></span><span>Mũi tên</span></button>
+        <button class="rbtn" data-rbid="elip" data-rblabel="⭕ Vẽ Đường tròn / Elip" data-tool="elip"><span class="ic" data-icon="elip"></span><span>Đường tròn</span></button>
+        <button class="rbtn" data-rbid="hcn" data-rblabel="▭ Vẽ Hình chữ nhật" data-tool="hcn"><span class="ic" data-icon="hcn"></span><span>Chữ nhật</span></button>
+        <button class="rbtn" data-rbid="tam_giac" data-rblabel="△ Vẽ Tam giác" data-tool="tam_giac"><span class="ic" data-icon="tam_giac"></span><span>Tam giác</span></button>
+        <button class="rbtn" data-rbid="to_trong_suot" data-rblabel="🎨 Tô miền gạch sọc" data-tool="to_trong_suot"><span class="ic" data-icon="to_sang"></span><span>Tô miền</span></button>
+        <button class="rbtn" data-rbid="chinh_hinh_dong" data-rblabel="👆 Kéo đỉnh / Điểm đường cong" data-tool="chinh_hinh_dong"><span class="ic" data-icon="hinh_dong"></span><span>Kéo đỉnh</span></button>
+        <button class="rbtn" data-rbid="dung_hinh" data-rblabel="📐 Mở Thanh Dựng hình 24 công cụ" id="rb-dung-hinh"><span class="ic" data-icon="hinh_dong"></span><span>Dựng hình</span></button>
+        <button class="rbtn" data-rbid="kho_hinh" data-rblabel="🖼️ Kho hình Toán - Lý" id="rb-kho-hinh2"><span class="ic" data-icon="kho_hinh"></span><span>Kho hình</span></button>
+
+        <div class="ribbon-buttons ribbon-style-controls" data-rbid="mau_co_net" data-rblabel="🎨 Cụm Màu bút &amp; Cỡ nét">
+          <div class="color-row">
+            <button class="c-dot active" data-color="#0066e0" style="background:#0066e0" title="Xanh dương"></button>
+            <button class="c-dot" data-color="#d92626" style="background:#d92626" title="Đỏ"></button>
+            <button class="c-dot" data-color="#111827" style="background:#111827" title="Đen"></button>
+            <button class="c-dot" data-color="#10b981" style="background:#10b981" title="Xanh lá"></button>
+            <button class="c-dot" data-color="#f59e0b" style="background:#f59e0b" title="Vàng cam"></button>
+            <input type="color" id="custom-pen-color" value="#0066e0" title="Chọn màu bút tùy ý" />
+          </div>
+          <div class="width-row">
+            <button class="w-pill" data-width="1.5">1.5pt</button>
+            <button class="w-pill active" data-width="2.6">2.6pt</button>
+            <button class="w-pill" data-width="4.5">4.5pt</button>
+            <button class="w-pill" id="rb-net-dut" title="Bật/Tắt nét đứt">-- Đứt</button>
+          </div>
+        </div>
+
+        <button class="rbtn" data-rbid="them_chu" data-rblabel="T Thêm chữ mới" data-tool="them_chu"><span class="ic" data-icon="them_chu"></span><span>Thêm chữ</span></button>
+        <button class="rbtn" data-rbid="cong_thuc" data-rblabel="Σ Chèn Công thức Toán - Lý" id="rb-formula"><span class="ic" data-icon="cong_thuc"></span><span>Công thức</span></button>
+        <button class="rbtn" data-rbid="chen_anh" data-rblabel="🖼️ Chèn ảnh từ máy" id="rb-insert-img"><span class="ic" data-icon="anh"></span><span>Chèn ảnh</span></button>
+        <button class="rbtn" data-rbid="mo_phong" data-rblabel="⚡ Mô phỏng Vật lí tương tác" id="rb-physics-sim"><span class="ic" data-icon="may_tinh"></span><span>Mô phỏng Lý</span></button>
+        <button class="rbtn" data-rbid="casio" data-rblabel="🧮 Máy tính Casio FX-580VN X" id="rb-casio2"><span class="ic" data-icon="may_tinh"></span><span>Casio</span></button>
+        <button class="rbtn active" data-rbid="luoi_oly" data-rblabel="▦ Bật / Tắt Lưới ô ly" id="rb-grid"><span class="ic" data-icon="luoi"></span><span>Lưới ô ly</span></button>
+        <select id="rb-grid-size" data-rbid="co_luoi" data-rblabel="📏 Cỡ ô lưới (PDF &amp; Bảng)" title="Tùy chỉnh kích cỡ ô lưới ô ly" style="height:34px;border-radius:7px;border:1px solid #B5CDEE;background:#FFFFFF;color:#1B2B45;font-size:10.5px;font-weight:700;padding:0 5px;cursor:pointer;flex-shrink:0">
+          <option value="12">Ô 12px</option>
+          <option value="16" selected>Ô 16px</option>
+          <option value="20">Ô 20px</option>
+          <option value="25">Ô 25px</option>
+        </select>
+        <button class="rbtn" data-rbid="hoan_tac" data-rblabel="↩ Hoàn tác (Undo)" id="rb-undo"><span class="ic" data-icon="hoan_tac"></span><span>Hoàn tác</span></button>
+        <button class="rbtn" data-rbid="lam_lai" data-rblabel="↪ Làm lại (Redo)" id="rb-redo"><span class="ic" data-icon="lam_lai"></span><span>Làm lại</span></button>
+        <button class="rbtn" data-rbid="nhan_ban" data-rblabel="📋 Nhân bản đối tượng đang chọn (Ctrl+D)" id="rb-duplicate-obj"><span style="font-size:15px;line-height:1">📋</span><span>Nhân bản</span></button>
+        <button class="rbtn" data-rbid="xoa_chon" data-rblabel="🗑️ Xoá đối tượng đang chọn" id="rb-delete-obj"><span class="ic" data-icon="xoa_trang"></span><span>Xoá chọn</span></button>
+        <button class="rbtn" data-rbid="xoa_sach" data-rblabel="🧹 Xoá sạch nét trang hiện tại" id="rb-clear-all-ink"><span class="ic" data-icon="xoa_vung_but"></span><span>Xoá sạch</span></button>
+      </div>
+
+      <div class="ribbon-sort-fixed">
+        <button class="rbtn rbtn-gear" id="rb-sort-btn" title="⚙ Sắp xếp thứ tự &amp; Ẩn/Hiện công cụ trên Thanh Ribbon ngang">
+          <span class="gear-ic">⚙</span><span>Sắp xếp</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- TAB 1: XEM & ĐỌC PDF NHẸ NHÀNG -->
+    <div class="ribbon-page" id="rpage-xem_pdf">
+      <div class="ribbon-group">
+        <div class="ribbon-buttons">
+          <button class="rbtn" id="rb-zoom-out"><span class="ic" data-icon="thu_nho"></span><span>Thu nhỏ</span></button>
+          <button class="rbtn" id="rb-zoom-in"><span class="ic" data-icon="phong_to"></span><span>Phóng to</span></button>
+          <button class="rbtn" id="rb-fit-width"><span class="ic" data-icon="vua_rong"></span><span>Vừa rộng</span></button>
+          <button class="rbtn" id="rb-fit-page"><span class="ic" data-icon="vua_trang"></span><span>Vừa trang</span></button>
+          <button class="rbtn" id="rb-rotate-page"><span class="ic" data-icon="xoay_phai"></span><span>Xoay trang</span></button>
+          <button class="rbtn" id="rb-reading-mode"><span class="ic" data-icon="che_do_doc"></span><span>Đổi nền đọc</span></button>
+          <button class="rbtn" id="rb-fullscreen"><span class="ic" data-icon="toan_man_hinh"></span><span>Toàn màn</span></button>
+        </div>
+        <div class="ribbon-group-title">Hiển thị &amp; Đọc PDF dịu mắt (Tự động giải phóng RAM Canvas)</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. KHUNG LÀM VIỆC CHÍNH -->
+  <div id="MainContainer">
+    <!-- 3A. THANH CÔNG CỤ DỌC BÊN TRÁI (#ThanhCongCuDoc) -->
+    <aside id="ThanhCongCuDoc">
+      <button class="vbar-top-green" id="vbar-toggle-btn" title="Đóng / Ẩn thanh công cụ dọc (Phím F9)">▣</button>
+      <button class="vbar-gear" id="vbar-sort-btn" title="⚙ Sắp xếp thứ tự &amp; Ẩn/Hiện công cụ trên Thanh dọc (Đưa công cụ hay dùng lên đầu)">⚙</button>
+      <button class="vbar-gear" id="vbar-palm-btn" title="Bật / Tắt Chống chạm tay (Bút cảm ứng để viết, ngón tay để cuộn trang)">✋</button>
+      <div class="vbar-sep"></div>
+      <div id="VbarDynamicTools" class="vbar-dynamic-tools">
+      <button class="vbar-btn" data-vbid="xoa_vung_but" data-vblabel="Quét xoá riêng nét bút viết" data-tool="xoa_vung_but" title="Quét xoá riêng nét bút viết"><span class="ic" data-icon="xoa_vung_but" data-dark="1"></span></button>
+      <button class="vbar-btn" data-vbid="chon" data-vblabel="Chọn đối tượng / nét vẽ / hình (Q)" data-tool="chon" title="Chọn đối tượng / nét vẽ / hình (Q)"><span class="ic" data-icon="chon" data-dark="1"></span></button>
+      <button class="vbar-btn" data-vbid="nhan_ban" data-vblabel="Nhân bản đối tượng đang chọn (Ctrl+D)" id="vbar-duplicate-obj" title="Nhân bản đối tượng đang chọn (Ctrl+D)">📋</button>
+      <button class="vbar-btn" data-vbid="tay" data-vblabel="Bàn tay kéo cuộn trang (W)" data-tool="tay" title="Bàn tay kéo cuộn trang (W)"><span class="ic" data-icon="tay" data-dark="1"></span></button>
+      <button class="vbar-btn" data-vbid="chinh_sua" data-vblabel="Chỉnh sửa chữ / ảnh / hình (E)" data-tool="chinh_sua" title="Chỉnh sửa chữ / ảnh / hình (E)"><span class="ic" data-icon="sua_chu" data-dark="1"></span></button>
+      <button class="vbar-btn active" data-vbid="but" data-vblabel="Bút viết siêu mượt Smooth Ink V2 (P)" data-tool="but" title="Bút viết siêu mượt Smooth Ink V2 (P) — Giữ 1s nắn thẳng/tròn/cung tròn/parabol/hyperbol/sóng sin/Oxy/căn thức"><span class="ic" data-icon="but" data-dark="1"></span></button>
+      <button class="vbar-btn" data-vbid="tay_net" data-vblabel="Tẩy nét bút vẽ tay" data-tool="tay_net" title="Tẩy nét bút vẽ tay"><span class="ic" data-icon="tay_net" data-dark="1"></span></button>
+      <button class="vbar-btn" data-vbid="duong" data-vblabel="Vẽ đường thẳng (L)" data-tool="duong" title="Vẽ đường thẳng (L)"><span class="ic" data-icon="duong" data-dark="1"></span></button>
+      <button class="vbar-btn" data-vbid="mui_ten" data-vblabel="Vẽ mũi tên (A)" data-tool="mui_ten" title="Vẽ mũi tên (A)"><span class="ic" data-icon="mui_ten" data-dark="1"></span></button>
+      <button class="vbar-btn" data-vbid="hcn" data-vblabel="Vẽ hình chữ nhật (R)" data-tool="hcn" title="Vẽ hình chữ nhật (R)"><span class="ic" data-icon="hcn" data-dark="1"></span></button>
+      <button class="vbar-btn" data-vbid="elip" data-vblabel="Vẽ đường tròn / elip (C)" data-tool="elip" title="Vẽ đường tròn / elip (C)"><span class="ic" data-icon="elip" data-dark="1"></span></button>
+      <button class="vbar-btn" data-vbid="tam_giac" data-vblabel="Vẽ tam giác (G)" data-tool="tam_giac" title="Vẽ tam giác (G)"><span class="ic" data-icon="tam_giac" data-dark="1"></span></button>
+      <button class="vbar-btn" data-vbid="to_trong_suot" data-vblabel="Tô màu bán trong suốt miền kín (F)" data-tool="to_trong_suot" title="Tô màu bán trong suốt miền kín (F)"><span class="ic" data-icon="to_sang" data-dark="1"></span></button>
+      <button class="vbar-btn" data-vbid="chinh_hinh_dong" data-vblabel="Chỉnh hình học động (Shift+G)" data-tool="chinh_hinh_dong" title="Chỉnh hình học động (Shift+G)"><span class="ic" data-icon="hinh_dong" data-dark="1"></span></button>
+      <button class="vbar-btn" data-vbid="dung_hinh" data-vblabel="📐 Thanh công cụ DỰNG HÌNH độc lập" id="vbar-dung-hinh" title="📐 Mở Thanh công cụ DỰNG HÌNH độc lập">📐</button>
+      <button class="vbar-btn" data-vbid="kho_hinh" data-vblabel="Kho hình mẫu Toán & Vật lý (K)" id="vbar-kho-hinh" title="Kho hình mẫu Toán &amp; Vật lý (K)"><span class="ic" data-icon="kho_hinh" data-dark="1"></span></button>
+      <button class="vbar-btn" data-vbid="them_chu" data-vblabel="Thêm chữ mới (T)" data-tool="them_chu" title="Thêm chữ mới (T)"><span class="ic" data-icon="them_chu" data-dark="1"></span></button>
+      <button class="vbar-btn" data-vbid="cong_thuc" data-vblabel="Chèn công thức Toán - Lý LaTeX (Σ)" id="vbar-formula" title="Chèn công thức Toán - Lý LaTeX (Σ)"><span class="ic" data-icon="cong_thuc" data-dark="1"></span></button>
+      <button class="vbar-btn" data-vbid="mo_phong" data-vblabel="Mô phỏng Vật lí tương tác HTML5" id="vbar-physics-sim" title="Mô phỏng Vật lí tương tác HTML5">⚡</button>
+      <button class="vbar-btn" data-vbid="casio" data-vblabel="Máy tính khoa học Casio FX-580VN X" id="vbar-casio" title="Máy tính khoa học Casio FX-580VN X">🧮</button>
+      <div class="vbar-colors" data-vbid="cum_mau" data-vblabel="Cụm 5 màu bút nhanh">
+        <button class="vc-dot active" data-color="#0066e0" style="background:#0066e0" title="Màu Xanh dương (Alt+1)"></button>
+        <button class="vc-dot" data-color="#d92626" style="background:#d92626" title="Màu Đỏ (Alt+2)"></button>
+        <button class="vc-dot" data-color="#111827" style="background:#111827" title="Màu Đen (Alt+3)"></button>
+        <button class="vc-dot" data-color="#ffffff" style="background:#ffffff" title="Màu Trắng (Alt+4)"></button>
+        <button class="vc-dot" data-color="#f59e0b" style="background:#f59e0b" title="Màu Vàng cam (Alt+5)"></button>
+      </div>
+      <button class="vbar-btn" data-vbid="bang_xanh" data-vblabel="Bảng viết phấn xanh độc lập (🟢)" id="vbar-bang-xanh" title="Mở Bảng viết phấn xanh độc lập (B)">🟢</button>
+      </div>
+    </aside>
+
+    <!-- 3B. VÙNG TÀI LIỆU TRUNG TÂM (#VungTaiLieu — ĐÃ ẨN THANH TAB TRÙNG LẶP ĐỂ TỐI ĐA KHÔNG GIAN ĐỌC ĐỀ TRÊN IPAD) -->
+    <section id="VungTaiLieu">
+      <div id="ThanhTabVaTim" class="hidden">
+        <div id="TabTaiLieu">
+          <div class="doc-tab active" id="active-doc-tab">
+            <span class="ic" data-icon="pdf"></span>
+            <span id="doc-tab-title">Đề thi Vật lí mẫu.pdf</span>
+          </div>
+          <button id="btn-add-tab" title="Mở thêm tệp PDF">+ Mở PDF</button>
+          <button id="btn-sample-tab" title="Nạp lại Đề thi Vật lí mẫu">📄 Đề mẫu</button>
+        </div>
+        <div class="ram-badge" id="ram-status-badge" title="Cơ chế tự động giải phóng RAM Canvas cho các trang ngoài vùng nhìn">⚡ Virtual Canvas 120Hz: Nhẹ tối đa</div>
+      </div>
+
+      <div id="KhungDocPdf">
+        <div id="PullAddPagePill" class="pull-add-pill hidden">✨ Thả tay để thêm trang trống mới!</div>
+        <div id="PdfPagesHolder"></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- 4. THANH TRẠNG THÁI DƯỚI CÙNG (#ThanhTrangThai — ĐÃ ẨN ĐỂ TỐI ĐA KHÔNG GIAN ĐỌC & VIẾT PDF TRÊN IPAD) -->
+  <footer id="ThanhTrangThai" class="hidden">
+    <div id="NhanThongBao">Sẵn sàng — NKPDF 2.9 (Bút 1€ Filter + Giữ 1s nắn: Thẳng, Tròn, Cung tròn, Parabol, Hyperbol p-V, Sóng Sin, Oxy, Căn bậc 2)</div>
+
+    <div class="status-controls">
+      <button class="sb-btn" id="sb-first-page" title="Trang đầu">⏮</button>
+      <button class="sb-btn" id="sb-prev-page" title="Trang trước">◀</button>
+      <span class="sb-label">Trang</span>
+      <input type="number" id="sb-page-input" value="1" min="1" />
+      <span class="sb-label" id="sb-total-pages">/ 1</span>
+      <button class="sb-btn" id="sb-next-page" title="Trang sau">▶</button>
+      <button class="sb-btn" id="sb-last-page" title="Trang cuối">⏭</button>
+
+      <div class="sb-sep"></div>
+
+      <button class="sb-btn" id="sb-zoom-out" title="Thu nhỏ">−</button>
+      <select id="sb-zoom-select" title="Tỷ lệ thu phóng">
+        <option value="0.75">75%</option>
+        <option value="1.0">100%</option>
+        <option value="1.25" selected>125%</option>
+        <option value="1.5">150%</option>
+        <option value="2.0">200%</option>
+        <option value="2.5">250%</option>
+        <option value="fit_width">Vừa rộng</option>
+      </select>
+      <button class="sb-btn" id="sb-zoom-in" title="Phóng to">+</button>
+
+      <div class="sb-sep"></div>
+
+      <select id="sb-reading-mode" title="Chế độ đọc">
+        <option value="white">Nền trắng</option>
+        <option value="cream">Dịu mắt (kem)</option>
+        <option value="blue">Xanh nhạt</option>
+        <option value="board">Bảng xanh</option>
+        <option value="night">Ban đêm</option>
+      </select>
+    </div>
+  </footer>
+
+  <!-- 5. CỬA SỔ BẢNG XANH VÔ HẠN ĐỘC LẬP (#CuaSoBangXanh — KÉO CẠNH CO GIÃN VỪA XEM PDF VỪA VIẾT BẢNG XANH) -->
+  <div id="CuaSoBangXanh" class="hidden">
+    <!-- 8 CẠNH & GÓC KÉO CO GIÃN BẢNG XANH (Y HỆT TRÊN PC!) -->
+    <div class="bx-resize-edge bx-edge-n" data-bxedge="n"></div>
+    <div class="bx-resize-edge bx-edge-s" data-bxedge="s"></div>
+    <div class="bx-resize-edge bx-edge-w" data-bxedge="w"></div>
+    <div class="bx-resize-edge bx-edge-e" data-bxedge="e"></div>
+    <div class="bx-resize-corner bx-corner-nw" data-bxedge="nw"></div>
+    <div class="bx-resize-corner bx-corner-ne" data-bxedge="ne"></div>
+    <div class="bx-resize-corner bx-corner-sw" data-bxedge="sw"></div>
+    <div class="bx-resize-corner bx-corner-se" data-bxedge="se"></div>
+
+    <div id="BangXanhCanvasWrap">
+      <canvas id="bx-grid-canvas"></canvas>
+      <canvas id="bx-ink-canvas"></canvas>
+      <canvas id="bx-active-canvas"></canvas>
+
+      <!-- THANH ĐIỀU KHIỂN CAMERA BẢNG XANH VÔ HẠN (ĐÃ ẨN ĐỂ MẶT BẢNG XANH SẠCH ĐẸP 100%) -->
+      <div id="BxInfiniteHud" class="bx-infinite-hud hidden">
+        <button class="bx-hud-btn" id="bx-hud-pan" title="Chế độ Bàn tay kéo bảng vô hạn (Hoặc kéo bằng 1-2 ngón tay)">✋ Kéo bảng</button>
+        <button class="bx-hud-btn" id="bx-hud-zoom-out" title="Thu nhỏ Bảng xanh">−</button>
+        <button class="bx-hud-btn bx-hud-badge" id="bx-hud-reset" title="Bấm để đưa Bảng xanh về Gốc tọa độ (0,0) tỷ lệ 100%">100% • (0,0)</button>
+        <button class="bx-hud-btn" id="bx-hud-zoom-in" title="Phóng to Bảng xanh">+</button>
+        <button class="bx-hud-btn" id="bx-hud-expand" title="Mở rộng dịch chuyển sang vùng bảng trống mới bên dưới">➕ Mở rộng trang</button>
+      </div>
+    </div>
+
+    <div id="ThanhDayBangXanh" class="bx-bar-dark">
+      <div id="BxDynamicTools" class="bx-dynamic-tools">
+        <button class="bx-btn" data-bxid="cong_thuc" data-bxlabel="Σ Công thức Toán - Lý" id="bx-btn-formula" title="Chèn công thức Toán/Lý LaTeX lên Bảng xanh">Σ Công thức</button>
+        <button class="bx-btn" data-bxid="them_chu" data-bxlabel="T Thêm chữ" data-bxtool="them_chu" title="Thêm chữ lên Bảng xanh (Phím T)">T Chữ</button>
+        <button class="bx-btn active" data-bxid="but" data-bxlabel="✏️ Bút viết phấn" data-bxtool="but" title="Bút viết phấn (P) — Giữ 1s tự nắn: Thẳng, Tròn, Cung tròn, Parabol, Hyperbol, Sóng Sin, Oxy, Căn bậc 2">✏️ Bút</button>
+        <button class="bx-btn" data-bxid="keo_bang" data-bxlabel="✋ Kéo bảng vô hạn" data-bxtool="tay" title="Kéo dịch chuyển Bảng xanh vô hạn 4 hướng (Phím W)">✋ Kéo</button>
+
+        <div class="bx-group" data-bxid="co_net" data-bxlabel="Cỡ nét (Mảnh / Vừa / Đậm)">
+          <button class="bx-size" data-bxwidth="1.8">Mảnh</button>
+          <button class="bx-size active" data-bxwidth="3.2">Vừa</button>
+          <button class="bx-size" data-bxwidth="5.5">Đậm</button>
+        </div>
+
+        <button class="bx-btn" data-bxid="net_dut" data-bxlabel="— Nét đứt" id="bx-btn-dashed" title="Bật / Tắt nét đứt (Ctrl+D)">— Nét đứt</button>
+        <button class="bx-btn" data-bxid="xoa_vung" data-bxlabel="⌧ Xóa vùng che nội dung" data-bxtool="xoa_vung" title="Xóa vùng che nội dung tiệp màu bảng">⌧ Xóa vùng</button>
+        <button class="bx-btn" data-bxid="chon" data-bxlabel="👆 Chọn / Sửa & Kéo điểm đường cong" data-bxtool="chon" title="Chọn hình vẽ để di chuyển, kéo điểm điều khiển đường cong, co dãn, đổi màu hoặc xóa">👆 Chọn/Sửa</button>
+        <button class="bx-btn" data-bxid="hinh_dong" data-bxlabel="📐 Hình động & Dựng hình" id="bx-btn-dung-hinh" title="Mở Thanh công cụ DỰNG HÌNH 24 công cụ &amp; kéo đỉnh hình động">📐 Hình động</button>
+        <button class="bx-btn" data-bxid="thuoc_ke" data-bxlabel="📏 Thước kẻ xoay 360°" id="bx-btn-ruler" title="Bật / Tắt Thước kẻ xoay 360° có hút nét bút dọc cạnh thước">📏 Thước</button>
+
+        <div class="bx-group bx-chalk-colors" data-bxid="cum_mau_phan" data-bxlabel="Cụm màu phấn">
+          <span class="bx-lbl">Phấn:</span>
+          <button class="bx-color active" data-bxcolor="#ffd60a" style="background:#ffd60a" title="Vàng phấn"></button>
+          <button class="bx-color" data-bxcolor="#ffffff" style="background:#ffffff; border:1px solid #94a3b8" title="Trắng phấn"></button>
+          <button class="bx-color" data-bxcolor="#38bdf8" style="background:#38bdf8" title="Xanh lam phấn"></button>
+          <button class="bx-color" data-bxcolor="#fb7185" style="background:#fb7185" title="Đỏ hồng phấn"></button>
+          <button class="bx-color" data-bxcolor="#fb923c" style="background:#fb923c" title="Cam phấn"></button>
+          <button class="bx-color" data-bxcolor="#0066e0" style="background:#0066e0" title="Xanh mực (cho nền trắng/kem)"></button>
+        </div>
+
+        <select id="bx-bg-select" data-bxid="nen_bang" data-bxlabel="🖼️ Chọn màu nền bảng (Xanh / Đen / Trắng / Kem)" class="bx-select" title="Chọn 4 màu nền chuẩn của Bảng xanh">
+          <option value="green">🖼️ Nền bảng: Xanh phấn</option>
+          <option value="black">🖼️ Nền bảng: Đen phấn</option>
+          <option value="white">🖼️ Nền bảng: Trắng</option>
+          <option value="cream">🖼️ Nền bảng: Vàng kem</option>
+        </select>
+
+        <select id="bx-grid-select" data-bxid="kieu_luoi" data-bxlabel="▦ Kiểu lưới ô ly đồng bộ" class="bx-select" title="Chọn kiểu lưới đồng bộ khi zoom/kéo Bảng xanh">
+          <option value="grid">▦ Lưới ô ly</option>
+          <option value="dots">⠿ Lưới chấm điểm</option>
+          <option value="lines">☰ Dòng kẻ ngang</option>
+          <option value="none">⬜ Không lưới</option>
+        </select>
+
+        <button class="bx-btn active" data-bxid="luoi" data-bxlabel="▦ Bật/Tắt Lưới" id="bx-btn-grid" title="Bật / Tắt nhanh lưới ô ly">▦ Lưới</button>
+        <button class="bx-btn" data-bxid="tay_net" data-bxlabel="🧹 Tẩy nét" data-bxtool="tay_net" title="Tẩy nét bút vẽ">🧹 Tẩy</button>
+        <button class="bx-btn bx-danger" data-bxid="lau_bang" data-bxlabel="🗑 Lau bảng" id="bx-btn-clear" title="Lau sạch toàn bộ bảng (hỗ trợ Ctrl+Z lấy lại)">🗑 Lau bảng</button>
+        <button class="bx-btn" data-bxid="kho_hinh" data-bxlabel="📐 Kho Hình Toán - Lý" id="bx-btn-kho-hinh" title="Chèn hình học &amp; thí nghiệm Toán - Lý">📐 Hình Toán - Lý ▾</button>
+        <button class="bx-btn active" data-bxid="hut_diem" data-bxlabel="🧲 Bắt điểm" id="bx-btn-snap-pt" title="Bật / Tắt bắt điểm đầu mút và đỉnh hình học">🧲 Bắt điểm</button>
+        <button class="bx-btn" data-bxid="hut_goc" data-bxlabel="📐 Bắt góc" id="bx-btn-snap-ang" title="Bật / Tắt bắt góc chuẩn (0°, 30°, 45°, 60°, 90°)">📐 Bắt góc</button>
+        <button class="bx-btn" data-bxid="dan_pdf" data-bxlabel="📸 Dán vào PDF" id="bx-btn-paste-pdf" title="Chụp bài giải trên Bảng xanh và dán ngay vào trang PDF hiện tại">📸 Dán vào PDF</button>
+        <button class="bx-btn" data-bxid="hoan_tac" data-bxlabel="↩ Hoàn tác (Ctrl+Z)" id="bx-btn-undo" title="Hoàn tác (Ctrl+Z / Chạm 2 ngón)">↩</button>
+        <button class="bx-btn" data-bxid="lam_lai" data-bxlabel="↪ Làm lại (Ctrl+Y)" id="bx-btn-redo" title="Làm lại (Ctrl+Y / Chạm 3 ngón)">↪</button>
+      </div>
+
+      <!-- CỤM ĐIỀU KHIỂN SẮP XẾP & CHIA ĐÔI MÀN HÌNH VỚI PDF Ở GÓC PHẢI THANH ĐÁY (Y HỆT BẢN PC!) -->
+      <div class="bx-window-controls">
+        <button class="bx-btn bx-gear-btn" id="bx-btn-sort" title="⚙ Sắp xếp thứ tự các công cụ trên BẢNG XANH (Đưa công cụ hay dùng ra trước)">⚙</button>
+        <button class="bx-btn" id="bx-btn-split-bottom" title="Chia nửa dưới màn hình: Vừa xem đề PDF ở nửa trên vừa viết Bảng xanh ở nửa dưới">⬓ Nửa dưới</button>
+        <button class="bx-btn" id="bx-btn-split-right" title="Chia nửa phải màn hình: Vừa xem đề PDF bên trái vừa viết Bảng xanh bên phải">◨ Nửa phải</button>
+        <button class="bx-btn" id="bx-btn-max" title="Phóng to toàn màn hình / Khôi phục kích thước cửa sổ">🗖</button>
+        <button class="bx-btn bx-close" id="bx-btn-close" title="Ẩn Bảng xanh để trở về PDF (Esc / B)">✖</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- HỘP THOẠI SẮP XẾP THỨ TỰ & ẨN/HIỆN CÔNG CỤ (DÙNG CHUNG CHO CẢ 4 THANH: THANH TRÊN, RIBBON NGANG, THANH DỌC & BẢNG XANH) -->
+  <div id="ModalSapXepCongCu" class="modal-backdrop hidden">
+    <div class="modal-dialog modal-large">
+      <div class="modal-header">
+        <span id="sort-modal-title">⚙ Sắp xếp thứ tự &amp; Ẩn/Hiện công cụ</span>
+        <button class="modal-close" id="close-sort-modal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="sort-target-tabs">
+          <button type="button" class="sort-tab-btn" data-sorttarget="top">1. 🟦 Thanh Trên Cùng</button>
+          <button type="button" class="sort-tab-btn" data-sorttarget="ribbon">2. ✏️ Thanh Ribbon Ngang</button>
+          <button type="button" class="sort-tab-btn" data-sorttarget="vbar">3. 📐 Thanh Công Cụ Dọc</button>
+          <button type="button" class="sort-tab-btn" data-sorttarget="bx">4. 🟢 Thanh Bảng Xanh</button>
+        </div>
+        <p class="sort-hint">Chọn một công cụ trong danh sách rồi bấm <b>⤒ Đưa ra đầu</b>, <b>▲ Lên trên</b>, <b>▼ Xuống dưới</b> để gom những công cụ hay dùng lại gần nhau. Bỏ tích ☑ (hoặc bấm nút <b>☑ Hiện / ⬜ Ẩn</b>) để ẩn bớt công cụ ít dùng.</p>
+        <div class="sort-layout">
+          <div id="sort-list-container" class="sort-list"></div>
+          <div class="sort-side-btns">
+            <button class="mbtn secondary" id="sort-btn-top">⤒ Đưa ra đầu</button>
+            <button class="mbtn secondary" id="sort-btn-up">▲ Lên trên</button>
+            <button class="mbtn secondary" id="sort-btn-down">▼ Xuống dưới</button>
+            <button class="mbtn secondary" id="sort-btn-bottom">⤓ Đưa ra cuối</button>
+            <button class="mbtn secondary" id="sort-btn-all">☑ Hiện tất cả</button>
+            <button class="mbtn secondary" id="sort-btn-reset">↺ Mặc định</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="mbtn secondary" id="cancel-sort-btn">Hủy</button>
+        <button class="mbtn primary" id="save-sort-btn">✔ Lưu &amp; Áp dụng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       6. THANH CÔNG CỤ DỰNG HÌNH ĐỘC LẬP NỔI (#ThanhDungHinh — MA TRẬN 24 CÔNG CỤ)
+       (Đồng bộ 100% với nkpdf/geometry/toolbar.py dùng chung cho cả PDF & Bảng Xanh)
+       ======================================================================== -->
+  <div id="ThanhDungHinh" class="geom-floating-toolbar hidden">
+    <div class="geom-header" id="geom-drag-handle">
+      <span>📐 DỰNG HÌNH <small id="geom-matrix-badge">[8×3]</small></span>
+      <button id="geom-close-btn" title="Đóng thanh dựng hình">✕</button>
+    </div>
+    <div id="GeomMatrixGrid" class="geom-matrix-grid cols-8">
+      <button class="gbtn" data-gtool="chinh_hinh_dong" title="Chọn và kéo các đỉnh/cạnh hình động">👆 Chọn/Kéo</button>
+      <button class="gbtn" data-gtool="dung_diem" title="Dựng điểm động có nhãn A, B, C...">• Điểm</button>
+      <button class="gbtn" data-gtool="duong" title="Dựng đoạn thẳng nối 2 điểm">╱ Đoạn</button>
+      <button class="gbtn" data-gtool="mui_ten" title="Dựng vectơ hoặc lực có hướng">↗ Vectơ/Lực</button>
+      <button class="gbtn" data-gtool="duong" title="Dựng đường thẳng">↔ Đường</button>
+      <button class="gbtn" data-gtool="tam_giac" title="Dựng tam giác / đa giác">▱ Đa giác</button>
+      <button class="gbtn" id="gbtn-to-mien" title="Tô miền gạch sọc chéo / caro / chấm bi / trong suốt">🎨 Tô miền ▾</button>
+      <button class="gbtn" id="gbtn-hinh-chuan" title="Dựng Tam giác đều/cân/vuông, Hình vuông/bình hành/thang">📐 Hình chuẩn ▾</button>
+
+      <button class="gbtn" data-gtool="elip" title="Dựng đường tròn">⭕ Đường tròn</button>
+      <button class="gbtn" id="gbtn-dung-them" title="Đường đẳng nhiệt p=k/V, Sóng dừng, Con lắc, Mạch RLC...">➕ Dựng thêm ▾</button>
+      <button class="gbtn" id="gbtn-bien-hinh" title="Đối xứng tâm, Đối xứng trục, Tịnh tiến, Phép quay">🪞 Biến hình ▾</button>
+      <button class="gbtn" id="gbtn-conic" title="Đường cong Conic: Parabol, Elip, Hyperbol 2 nhánh">⚡ Conic ▾</button>
+      <button class="gbtn" id="gbtn-so-do" title="Dựng đoạn thẳng độ dài L, góc α, đường tròn bán kính R">📏 Số đo ▾</button>
+      <button class="gbtn" id="gbtn-tao-oxy" title="Tạo hệ trục tọa độ Oxy mini có vạch chia">📐 Tạo Oxy</button>
+      <button class="gbtn" data-gtool="tay_net" title="Tẩy xóa nét vẽ">🧹 Tẩy</button>
+      <button class="gbtn" id="gbtn-thao-tac" title="Đổi màu, Nhân bản, Xóa đối tượng đang chọn">⚙ Thao tác ▾</button>
+
+      <button class="gbtn" id="gbtn-chon-nhieu" title="Bật/tắt chế độ chọn nhiều đối tượng">☑ Chọn nhiều</button>
+      <button class="gbtn" id="gbtn-bo-chon" title="Bỏ chọn toàn bộ đối tượng">✕ Bỏ chọn</button>
+      <button class="gbtn active" id="gbtn-diem-dung" title="Bật/Tắt hiển thị chấm tròn điểm dựng">👁 Điểm dựng</button>
+      <button class="gbtn" id="gbtn-hien-an" title="Ẩn / Hiện lại đối tượng đang chọn">👁 Hiện ẩn</button>
+      <button class="gbtn active" id="gbtn-nhan" title="Bật/Tắt hiển thị nhãn chữ A, B, C...">🏷 Nhãn</button>
+      <button class="gbtn" id="gbtn-tu-do" title="Ép tạo điểm tự do">📌 Tự do</button>
+      <button class="gbtn" id="gbtn-sap-xep" title="Đổi bố cục ma trận: 8×3, 6×4, 12×2, 4×6">⊞ Sắp xếp ▾</button>
+      <button class="gbtn gbtn-cancel" id="gbtn-huy" title="Hủy thao tác dựng dở (Esc)">✕ Hủy</button>
+    </div>
+    <!-- Menu con ẩn của Thanh Dựng Hình -->
+    <div id="GeomSubmenuBar" class="geom-submenu-bar hidden"></div>
+    <div id="GeomGuideText" class="geom-guide-text">
+      Sẵn sàng. Bấm <b>👆 Chọn/Kéo</b> để kéo từng đỉnh tam giác/đa giác, hoặc chọn <b>📐 Hình chuẩn / ⚡ Conic / 🎨 Tô miền</b>.
+    </div>
+  </div>
+
+  <!-- 7. HỘP THOẠI Σ CÔNG THỨC TOÁN - LÝ (KATEX OFFLINE — DỰNG PHÂN SỐ, CĂN THỨC, VECTƠ CHUẨN VECTOR) -->
+  <div id="ModalCongThuc" class="modal-backdrop hidden">
+    <div class="modal-dialog modal-large">
+      <div class="modal-header">
+        <span>Σ Chèn &amp; Sửa Công thức Toán - Lý (LaTeX chuẩn KaTeX Offline)</span>
+        <button class="modal-close" id="close-formula-modal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="formula-cat-label">📐 Mẫu Toán học nhanh:</div>
+        <div class="formula-presets">
+          <button class="fp-btn" data-tex="\frac{a}{b}">Phân số a/b</button>
+          <button class="fp-btn" data-tex="\sqrt{b^2 - 4ac}">Căn bậc 2 Δ</button>
+          <button class="fp-btn" data-tex="x = \frac{-b \pm \sqrt{\Delta}}{2a}">Nghiệm bậc 2</button>
+          <button class="fp-btn" data-tex="\int_{a}^{b} f(x)\,dx">Tích phân</button>
+          <button class="fp-btn" data-tex="\sum_{i=1}^{n} x_i">Tổng Sigma</button>
+          <button class="fp-btn" data-tex="\vec{u}\cdot\vec{v} = |\vec{u}||\vec{v}|\cos\alpha">Tích vô hướng</button>
+          <button class="fp-btn" data-tex="\sin^2\alpha + \cos^2\alpha = 1">Lượng giác</button>
+        </div>
+        <div class="formula-cat-label">⚡ Mẫu Vật lí 10 – 11 – 12 nhanh:</div>
+        <div class="formula-presets">
+          <button class="fp-btn" data-tex="\vec{F}_{hl} = m\vec{a}">ĐL II Newton</button>
+          <button class="fp-btn" data-tex="s = v_0 t + \frac{1}{2}at^2">Quãng đường BĐĐ</button>
+          <button class="fp-btn" data-tex="x = A\cos(\omega t + \varphi)">Dao động ĐH</button>
+          <button class="fp-btn" data-tex="T = 2\pi\sqrt{\frac{m}{k}}">Con lắc lò xo</button>
+          <button class="fp-btn" data-tex="T = 2\pi\sqrt{\frac{\ell}{g}}">Con lắc đơn</button>
+          <button class="fp-btn" data-tex="d_2 - d_1 = k\lambda">Giao thoa CĐ</button>
+          <button class="fp-btn" data-tex="I = \frac{\mathcal{E}}{R + r}">Định luật Ôm</button>
+          <button class="fp-btn" data-tex="Z = \sqrt{R^2 + (Z_L - Z_C)^2}">Tổng trở RLC</button>
+          <button class="fp-btn" data-tex="\frac{p_1 V_1}{T_1} = \frac{p_2 V_2}{T_2}">Khí lí tưởng</button>
+          <button class="fp-btn" data-tex="\varepsilon = \frac{hc}{\lambda} = A + W_{d\max}">Lượng tử Einstein</button>
+        </div>
+        <div class="formula-size-row">
+          <label for="formula-size-range">Cỡ chữ công thức: <b id="formula-size-lbl">26 pt</b></label>
+          <input type="range" id="formula-size-range" min="16" max="52" step="2" value="26" />
+        </div>
+        <textarea id="formula-input" rows="3" placeholder="Nhập mã LaTeX, ví dụ: x = A\cos(\omega t + \varphi)"></textarea>
+        <div class="formula-preview-box">
+          <div id="formula-preview"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="mbtn secondary" id="cancel-formula-btn">Hủy</button>
+        <button class="mbtn primary" id="insert-formula-btn">✔ Chèn vào trang (theo màu bút hiện tại)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 8. HỘP THOẠI 📐 KHO HÌNH MẪU TOÁN & VẬT LÍ (ĐẦY ĐỦ 14 HÌNH PNG GỐC + HÌNH ĐỘNG VECTOR) -->
+  <div id="ModalKhoHinh" class="modal-backdrop hidden">
+    <div class="modal-dialog modal-large">
+      <div class="modal-header">
+        <span>📐 Kho Hình học &amp; Vật lý — Lớp Toán &amp; Lý (Phím K)</span>
+        <button class="modal-close" id="close-khohinh-modal">✕</button>
+      </div>
+      <div class="modal-body">
+        <h4 class="kh-sec-title">1. Hình học động Vector (Chèn vào kéo được từng đỉnh &amp; đổi màu trực tiếp)</h4>
+        <div class="khohinh-grid">
+          <button class="kh-card" data-shape="he_truc_oxy"><b>📈 Hệ trục tọa độ Oxy</b><span>Trục vuông góc có vạch chia &amp; nhãn O, x, y</span></button>
+          <button class="kh-card" data-shape="song_sin"><b>〰️ Đồ thị sóng hình Sin</b><span>1,5 chu kỳ dao động điều hòa mượt</span></button>
+          <button class="kh-card" data-shape="dang_nhiet_pv"><b>📊 Đồ thị 2 đường đẳng nhiệt (p-V)</b><span>Hai nhánh Hyperbol T₂ &gt; T₁ chuẩn Vật lí</span></button>
+          <button class="kh-card" data-shape="song_dung"><b>🌊 Sóng dừng trên dây</b><span>Bụng sóng &amp; nút sóng nét liền + nét đứt</span></button>
+          <button class="kh-card" data-shape="con_lac_lo_xo"><b>🌀 Con lắc lò xo ngang</b><span>Tường cố định + lò xo ziczac + vật nặng m</span></button>
+          <button class="kh-card" data-shape="con_lac_don"><b>⏱️ Con lắc đơn</b><span>Giá treo + dây treo lệch góc α + quả nặng</span></button>
+          <button class="kh-card" data-shape="mat_phang_nghieng"><b>📐 Mặt phẳng nghiêng</b><span>Mặt nghiêng góc α + vật trượt trên dốc</span></button>
+          <button class="kh-card" data-shape="thau_kinh_hoi_tu"><b>🔍 Thấu kính hội tụ</b><span>Trục chính + thấu kính + tiêu điểm F, O, F'</span></button>
+          <button class="kh-card" data-shape="mach_rlc"><b>⚡ Đoạn mạch xoay chiều RLC</b><span>Điện trở R — Cuộn cảm L — Tụ điện C nối tiếp</span></button>
+          <button class="kh-card" data-shape="hinh_chop"><b>🔺 Hình chóp tứ giác S.ABCD</b><span>Có sẵn nét liền và nét đứt khuất không gian</span></button>
+          <button class="kh-card" data-shape="nem_ngang"><b>🎯 Chuyển động ném ngang</b><span>Quỹ đạo Parabol + vectơ v₀ và gióng tọa độ</span></button>
+          <button class="kh-card" data-shape="nem_xien"><b>🚀 Chuyển động ném xiên</b><span>Quỹ đạo Parabol + đỉnh Hmax + tầm xa L</span></button>
+          <button class="kh-card" data-shape="giao_thoa_song"><b>〰️ Giao thoa sóng 2 nguồn S₁, S₂</b><span>Cực đại nét liền &amp; cực tiểu nét đứt Hyperbol</span></button>
+        </div>
+
+        <h4 class="kh-sec-title" style="margin-top:14px">2. Thư viện 14 Hình ảnh Toán – Lý gốc từ bản PC (assets/kho_hinh)</h4>
+        <div class="khohinh-img-grid" id="kh-png-grid">
+          <button class="kh-img-card" data-img="./kho_hinh/Toan_Hoc/Do_Thi/Do_thi_Parabol.png"><img src="./kho_hinh/Toan_Hoc/Do_Thi/Do_thi_Parabol.png" alt="" /><span>Đồ thị Parabol</span></button>
+          <button class="kh-img-card" data-img="./kho_hinh/Toan_Hoc/Hinh_Khong_Gian/Chop_tam_giac_S_ABC.png"><img src="./kho_hinh/Toan_Hoc/Hinh_Khong_Gian/Chop_tam_giac_S_ABC.png" alt="" /><span>Chóp tam giác S.ABC</span></button>
+          <button class="kh-img-card" data-img="./kho_hinh/Toan_Hoc/Hinh_Khong_Gian/Chop_tu_giac_S_ABCD.png"><img src="./kho_hinh/Toan_Hoc/Hinh_Khong_Gian/Chop_tu_giac_S_ABCD.png" alt="" /><span>Chóp tứ giác S.ABCD</span></button>
+          <button class="kh-img-card" data-img="./kho_hinh/Toan_Hoc/Hinh_Phang/Duong_tron_luong_giac_Oxy.png"><img src="./kho_hinh/Toan_Hoc/Hinh_Phang/Duong_tron_luong_giac_Oxy.png" alt="" /><span>Đường tròn lượng giác</span></button>
+          <button class="kh-img-card" data-img="./kho_hinh/Toan_Hoc/Hinh_Phang/Hinh_binh_hanh_ABCD.png"><img src="./kho_hinh/Toan_Hoc/Hinh_Phang/Hinh_binh_hanh_ABCD.png" alt="" /><span>Hình bình hành ABCD</span></button>
+          <button class="kh-img-card" data-img="./kho_hinh/Vat_Ly/Co_Hoc/Chuyen_dong_nem_ngang.png"><img src="./kho_hinh/Vat_Ly/Co_Hoc/Chuyen_dong_nem_ngang.png" alt="" /><span>Chuyển động ném ngang</span></button>
+          <button class="kh-img-card" data-img="./kho_hinh/Vat_Ly/Co_Hoc/Chuyen_dong_nem_xien.png"><img src="./kho_hinh/Vat_Ly/Co_Hoc/Chuyen_dong_nem_xien.png" alt="" /><span>Chuyển động ném xiên</span></button>
+          <button class="kh-img-card" data-img="./kho_hinh/Vat_Ly/Co_Hoc/Con_lac_don.png"><img src="./kho_hinh/Vat_Ly/Co_Hoc/Con_lac_don.png" alt="" /><span>Con lắc đơn</span></button>
+          <button class="kh-img-card" data-img="./kho_hinh/Vat_Ly/Co_Hoc/Con_lac_don_dao_dong.png"><img src="./kho_hinh/Vat_Ly/Co_Hoc/Con_lac_don_dao_dong.png" alt="" /><span>Con lắc đơn dao động</span></button>
+          <button class="kh-img-card" data-img="./kho_hinh/Vat_Ly/Co_Hoc/Con_lac_lo_xo_nam_ngang.png"><img src="./kho_hinh/Vat_Ly/Co_Hoc/Con_lac_lo_xo_nam_ngang.png" alt="" /><span>Con lắc lò xo ngang</span></button>
+          <button class="kh-img-card" data-img="./kho_hinh/Vat_Ly/Co_Hoc/Con_lac_lo_xo_thang_dung.png"><img src="./kho_hinh/Vat_Ly/Co_Hoc/Con_lac_lo_xo_thang_dung.png" alt="" /><span>Con lắc lò xo đứng</span></button>
+          <button class="kh-img-card" data-img="./kho_hinh/Vat_Ly/Dao_Dong_Song/Do_thi_sin_cos_dao_dong.png"><img src="./kho_hinh/Vat_Ly/Dao_Dong_Song/Do_thi_sin_cos_dao_dong.png" alt="" /><span>Đồ thị Sin/Cos</span></button>
+          <button class="kh-img-card" data-img="./kho_hinh/Vat_Ly/Dao_Dong_Song/Giao_thoa_song_hai_nguon.png"><img src="./kho_hinh/Vat_Ly/Dao_Dong_Song/Giao_thoa_song_hai_nguon.png" alt="" /><span>Giao thoa sóng 2 nguồn</span></button>
+          <button class="kh-img-card" data-img="./kho_hinh/Vat_Ly/Dao_Dong_Song/Song_dung_tren_day.png"><img src="./kho_hinh/Vat_Ly/Dao_Dong_Song/Song_dung_tren_day.png" alt="" /><span>Sóng dừng trên dây</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 9. MÁY TÍNH KHOA HỌC CASIO FX-580VN X NỔI (#CuaSoCasio) -->
+  <div id="CuaSoCasio" class="floating-window hidden">
+    <div class="fw-header" id="casio-drag-handle">
+      <span>🧮 CASIO fx-580VN X</span>
+      <button class="fw-close" id="close-casio-btn">✕</button>
+    </div>
+    <div class="casio-body">
+      <div class="casio-screen">
+        <div id="casio-expr"></div>
+        <div id="casio-result">0</div>
+      </div>
+      <div class="casio-keys">
+        <button data-ck="sin(">sin</button><button data-ck="cos(">cos</button><button data-ck="tan(">tan</button><button data-ck="sqrt(">√</button><button data-ck="C" class="ck-red">AC</button>
+        <button data-ck="asin(">sin⁻¹</button><button data-ck="acos(">cos⁻¹</button><button data-ck="^2">x²</button><button data-ck="^">xʸ</button><button data-ck="DEL" class="ck-warn">DEL</button>
+        <button data-ck="7">7</button><button data-ck="8">8</button><button data-ck="9">9</button><button data-ck="(">(</button><button data-ck=")">)</button>
+        <button data-ck="4">4</button><button data-ck="5">5</button><button data-ck="6">6</button><button data-ck="*">×</button><button data-ck="/">÷</button>
+        <button data-ck="1">1</button><button data-ck="2">2</button><button data-ck="3">3</button><button data-ck="+">+</button><button data-ck="-">−</button>
+        <button data-ck="0">0</button><button data-ck=".">.</button><button data-ck="pi">π</button><button data-ck="Ans">Ans</button><button data-ck="=" class="ck-eq">=</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 10. CỬA SỔ MÔ PHỎNG VẬT LÍ TƯƠNG TÁC HTML5 (#CuaSoMoPhong — 8 MÔ PHỎNG VẬT LÍ 10-11-12) -->
+  <div id="CuaSoMoPhong" class="floating-sim hidden">
+    <div class="fw-header" id="sim-drag-handle">
+      <span>⚡ Mô phỏng Vật lí tương tác (HTML5 100% Offline)</span>
+      <div class="sim-selector-wrap">
+        <select id="sim-select">
+          <option value="./sims/nem_xien_v2.html">1. [Lớp 10] Chuyển động Ném xiên 2D tương tác</option>
+          <option value="./sims/custom/NKPdf_NemXien_16x9.html">2. [Lớp 10] Ném xiên chuẩn 16:9 &amp; Đồng hồ Δt</option>
+          <option value="./sims/custom/NKPdf_TongHop_PhanTichLuc_16x9.html">3. [Lớp 10] Tổng hợp &amp; Phân tích lực (Hình bình hành)</option>
+          <option value="./sims/custom/NKPdf_HaiXe_16x9_XeChay_MocDungYen.html">4. [Lớp 10] Hai xe chuyển động &amp; Hệ quy chiếu</option>
+          <option value="./sims/sim01_chuyen_dong_thang/index.html">5. [Lớp 10] Chuyển động thẳng biến đổi đều</option>
+          <option value="./sims/con_lac_lo_xo_11.html">6. [Lớp 11] Con lắc lò xo &amp; Đồ thị Dao động điều hòa x(t)</option>
+          <option value="./sims/giao_thoa_song_11.html">7. [Lớp 11] Giao thoa sóng cơ 2 nguồn đồng bộ S₁, S₂</option>
+          <option value="./sims/dang_nhiet_boyle_12.html">8. [Lớp 12] Định luật Boyle — Quá trình Đẳng nhiệt p-V</option>
+        </select>
+        <button class="sim-action-btn" id="sim-capture-btn" title="Chụp hình mô phỏng hiện tại và dán ngay vào trang PDF hoặc Bảng xanh để viết vẽ chú thích">📸 Chụp dán vào Bài</button>
+        <button class="sim-action-btn" id="sim-pip-btn" title="Thu nhỏ góc màn hình (PiP) để vừa chạy mô phỏng vừa viết Bảng xanh / PDF">🗗 Thu nhỏ góc</button>
+        <button class="fw-close" id="close-sim-btn">✕ Đóng</button>
+      </div>
+    </div>
+    <iframe id="sim-iframe" src="about:blank"></iframe>
+  </div>
+
+  <!-- 11. THƯỚC KẺ TƯƠNG TÁC XOAY 360° & HÚT NÉT BÚT DỌC CẠNH THƯỚC (#ThuocKeTuongTac) -->
+  <div id="ThuocKeTuongTac" class="interactive-ruler hidden">
+    <div class="ruler-rot-handle ruler-rot-left" data-rulerrot="left" title="Kéo đầu thước để xoay góc 360°">⟳</div>
+    <div class="ruler-body" id="ruler-drag-body">
+      <canvas id="ruler-ticks-canvas" width="660" height="68"></canvas>
+      <div class="ruler-controls">
+        <span class="ruler-angle-badge" id="ruler-angle-lbl">0°</span>
+        <button class="ruler-ang-btn" data-rang="0">0°</button>
+        <button class="ruler-ang-btn" data-rang="30">30°</button>
+        <button class="ruler-ang-btn" data-rang="45">45°</button>
+        <button class="ruler-ang-btn" data-rang="60">60°</button>
+        <button class="ruler-ang-btn" data-rang="90">90°</button>
+        <button class="ruler-close-btn" id="ruler-close-btn" title="Ẩn thước kẻ (Phím U)">✕</button>
+      </div>
+    </div>
+    <div class="ruler-rot-handle ruler-rot-right" data-rulerrot="right" title="Kéo đầu thước để xoay góc 360°">⟳</div>
+  </div>
+
+  <!-- 12. HỘP NHẬP CHỮ NỔI TRỰC TIẾP TẠI VỊ TRÍ CHẠM (#HopNhapChuNoi) -->
+  <div id="HopNhapChuNoi" class="inline-text-editor hidden">
+    <div class="ite-bar">
+      <span id="ite-title">T Nhập chữ lên trang</span>
+      <div class="ite-btns">
+        <button type="button" id="ite-font-dec" title="Giảm cỡ chữ">A−</button>
+        <span id="ite-font-lbl">20pt</span>
+        <button type="button" id="ite-font-inc" title="Tăng cỡ chữ">A+</button>
+        <button type="button" class="ite-ok" id="ite-commit-btn">✔ Chèn</button>
+        <button type="button" class="ite-cancel" id="ite-cancel-btn">✕</button>
+      </div>
+    </div>
+    <textarea id="ite-textarea" rows="2" placeholder="Nhập nội dung chữ (Enter xuống dòng, bấm ✔ Chèn để hoàn tất)..."></textarea>
+  </div>
+
+  <!-- 13. HỘP THOẠI HƯỚNG DẪN CÀI LÊN MÀN HÌNH CHÍNH IPAD & ĐÓNG GÓI OFFLINE 100% (#ModalCaiDatIpad) -->
+  <div id="ModalCaiDatIpad" class="modal-backdrop hidden">
+    <div class="modal-dialog modal-large">
+      <div class="modal-header">
+        <span>📲 Cài đặt NKPDF 2.9 lên Màn hình chính iPad &amp; Chế độ Offline 100%</span>
+        <button class="modal-close" id="close-install-modal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="pwa-status-card">
+          <div class="pwa-status-top">
+            <div>
+              <b id="pwa-cache-status-title">✅ Trạng thái Offline PWA: Sẵn sàng</b>
+              <p id="pwa-cache-status-desc">Toàn bộ giao diện, Động cơ Bút 120Hz, KaTeX, 14 Hình mẫu và 8 Mô phỏng Vật lí đã được đóng gói để chạy không cần mạng.</p>
+            </div>
+            <button class="mbtn primary" id="btn-verify-offline">⬇️ Tải &amp; Kiểm tra 100% Offline</button>
+          </div>
+          <div class="pwa-progress-wrap">
+            <div class="pwa-progress-bar" id="pwa-offline-bar" style="width: 100%"></div>
+          </div>
+        </div>
+
+        <h4 class="kh-sec-title" style="margin-top:12px">1. Hướng dẫn 3 bước đưa biểu tượng NKPDF 2.9 ra Màn hình chính iPad (Full-screen như App gốc)</h4>
+        <div class="ipad-steps-grid">
+          <div class="ipad-step-card">
+            <div class="step-num">Bước 1</div>
+            <b>Mở bằng Safari trên iPad</b>
+            <p>Truy cập link chính thức: <code>https://thienngoc89.github.io/nkpdf-ipad/</code> trên trình duyệt <b>Safari</b> của iPad.</p>
+          </div>
+          <div class="ipad-step-card">
+            <div class="step-num">Bước 2</div>
+            <b>Bấm nút Chia sẻ (Share ⍐)</b>
+            <p>Chạm vào biểu tượng <b>Chia sẻ (ô vuông có mũi tên hướng lên)</b> ở góc trên bên phải thanh địa chỉ Safari.</p>
+          </div>
+          <div class="ipad-step-card">
+            <div class="step-num">Bước 3</div>
+            <b>Chọn "Thêm vào MH chính"</b>
+            <p>Cuộn xuống chọn <b>➕ Thêm vào MH chính (Add to Home Screen)</b> → Bấm <b>Thêm (Add)</b>. App sẽ chạy toàn màn hình 100% và hoạt động cả khi tắt Wi-Fi!</p>
+          </div>
+        </div>
+
+        <h4 class="kh-sec-title" style="margin-top:14px">2. Bảng Cử chỉ iPadOS &amp; Apple Pencil chuyên dụng trong NKPDF 2.9</h4>
+        <div class="ipad-gestures-grid">
+          <div class="gesture-item"><b>✌️ Chạm 2 ngón tay</b><span>Hoàn tác ngay lập tức (Undo / Ctrl+Z) trên cả PDF và Bảng xanh</span></div>
+          <div class="gesture-item"><b>🤟 Chạm 3 ngón tay</b><span>Làm lại thao tác (Redo / Ctrl+Y) nhanh không cần bấm nút</span></div>
+          <div class="gesture-item"><b>🤏 Chụm / Mở 2 ngón tay</b><span>Zoom &amp; Kéo vô hạn trên Bảng xanh hoặc thu phóng trang PDF mượt 120Hz</span></div>
+          <div class="gesture-item"><b>✍️ Giữ bút 0.5s + Dịch bút</b><span>Nắn thẳng, tròn, cung tròn, Parabol, sóng Sin, Hyperbol, Oxy, Căn bậc 2 và kéo biến dạng sống theo mũi bút</span></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="mbtn" id="btn-force-sync-ipad">🔄 Đồng bộ bản mới nhất</button>
+        <button class="mbtn primary" id="ok-install-modal">✔ Đã hiểu &amp; Tiếp tục</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 14. HỘP THOẠI CHẾ ĐỘ TRÌNH CHIẾU TV 16:9 (#ModalTrinhChieu — IPAD VẪN GIỮ NGUYÊN CÔNG CỤ!) -->
+  <div id="ModalTrinhChieu" class="modal-backdrop hidden">
+    <div class="modal-dialog" style="max-width:520px">
+      <div class="modal-header">
+        <span>📺 Chế độ Trình chiếu TV 16:9 (iPad vẫn giữ nguyên công cụ!)</span>
+        <button class="modal-close" id="close-present-modal">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:12.5px;color:#334155;margin-bottom:10px;line-height:1.45">
+          Trên <b>iPad luôn giữ nguyên đầy đủ thanh công cụ</b> để Thầy viết vẽ thoải mái. Màn hình <b>TV 16:9</b> chỉ hiển thị nội dung bài giảng <b>tràn viền 100% (0% vạch đen, 0% công cụ)</b> dù iPad kích cỡ nào!
+        </p>
+
+        <div style="background:#F8FAFC;border:1px solid #CBD5E1;border-radius:10px;padding:10px 12px;margin-bottom:10px">
+          <div style="font-weight:700;font-size:12.5px;color:#0F172A;margin-bottom:6px">1. Chọn kiểu hiển thị trên TV 16:9:</div>
+          <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;margin-bottom:6px;cursor:pointer">
+            <input type="radio" name="tv-present-mode" value="presenter_crop" checked />
+            <span><b>Chiếu trang người giảng (Khuyên dùng):</b> Tràn ngang 100% TV 16:9, không công cụ, không viền đen</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;cursor:pointer">
+            <input type="radio" name="tv-present-mode" value="full_page" />
+            <span><b>Chiếu toàn trang:</b> Hiển thị trọn vẹn cả trang hiện tại trên TV, không công cụ</span>
+          </label>
+          <div style="margin-top:8px;padding-top:8px;border-top:1px dashed #CBD5E1;display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px">
+            <label for="tv-quality-preset" style="font-weight:700;color:#0F172A">Độ nét TV:</label>
+            <select id="tv-quality-preset" style="padding:4px 8px;border:1px solid #94A3B8;border-radius:6px;font-size:12px;font-weight:600;background:#FFF">
+              <option value="auto" selected>Tự động (1920×1080 → tự hạ nếu mạng yếu)</option>
+              <option value="fhd">Sắc nét Full HD (1920×1080 • 0.88)</option>
+              <option value="hd">Cân bằng HD (1280×720 • 0.88)</option>
+              <option value="sd">TV yếu / Wi-Fi chậm (960×540 • 0.85)</option>
+            </select>
+            <span id="tv-metrics-badge" style="font-size:11px;color:#475569;font-family:monospace"></span>
+          </div>
+          <div style="margin-top:8px;padding-top:8px;border-top:1px dashed #CBD5E1;font-size:12px">
+            <div style="font-weight:700;color:#0F172A;margin-bottom:4px">Thử nghiệm Video trực tiếp 16:9 (WebRTC Video Track):</div>
+            <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:6px">
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+                <input type="radio" name="tv-stream-mode" value="vector" checked />
+                <span>Chế độ hiện tại (PDF tự dựng / Ảnh dự phòng)</span>
+              </label>
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+                <input type="radio" name="tv-stream-mode" value="video_test" />
+                <span><b>Thử Video Test:</b> Mẫu chữ nhỏ, công thức &amp; nét chuyển động</span>
+              </label>
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+                <input type="radio" name="tv-stream-mode" value="video_live" />
+                <span><b>Video trực tiếp 16:9:</b> Chiếu bài giảng thật qua luồng Video</span>
+              </label>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+              <select id="tv-video-preset" style="padding:4px 8px;border:1px solid #94A3B8;border-radius:6px;font-size:11.5px;font-weight:600;background:#FFF">
+                <option value="1080p30" selected>1920×1080 • mục tiêu 30 fps (Rõ chữ)</option>
+                <option value="720p60">1280×720 • mục tiêu 60 fps (Giảm trễ)</option>
+              </select>
+              <select id="tv-video-hint" style="padding:4px 8px;border:1px solid #94A3B8;border-radius:6px;font-size:11.5px;font-weight:600;background:#FFF">
+                <option value="detail" selected>contentHint: detail</option>
+                <option value="text">contentHint: text</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div style="background:#EFF6FF;border:1px solid #93C5FD;border-radius:10px;padding:10px 12px;margin-bottom:10px">
+          <div style="font-weight:700;font-size:12.5px;color:#1E3A8A;margin-bottom:6px">2. Chiếu không dây lên Smart TV / Laptop nối TV (0% vạch đen):</div>
+          <div style="font-size:12px;color:#334155;margin-bottom:8px">
+            Mở link <code>thienngoc89.github.io/nkpdf-ipad/tv.html</code> trên trình duyệt TV/Máy tính, rồi nhập <b>Mã 4 số</b> hiện trên TV:
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <input type="tel" id="tv-code-input" maxlength="4" placeholder="Nhập mã 4 số (VD: 4829)" style="flex:1;min-width:150px;padding:8px 10px;border:1.5px solid #3B82F6;border-radius:8px;font-size:15px;font-weight:800;letter-spacing:4px;text-align:center" />
+            <button type="button" class="mbtn" id="btn-test-tv-wireless" style="background:#FEF3C7;color:#B45309;border-color:#F59E0B;font-weight:800">🧪 TEST</button>
+            <button type="button" class="mbtn primary" id="btn-connect-tv-wireless">📡 Chiếu lên TV</button>
+          </div>
+          <div id="tv-connect-status" style="font-size:12px;color:#047857;font-weight:600;margin-top:6px;line-height:1.4"></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:6px">
+            <button type="button" class="mbtn" id="btn-toggle-tv-diag" style="font-size:11.5px;padding:5px 10px;background:#F1F5F9;color:#0F172A;border-color:#CBD5E1">📊 Bật/Tắt Bảng chẩn đoán</button>
+          </div>
+          <pre id="tv-diag-panel" class="hidden" style="margin-top:8px;padding:8px 10px;background:#0F172A;color:#E2E8F0;border-radius:8px;font-size:11px;line-height:1.45;white-space:pre-wrap;word-break:break-word;max-height:200px;overflow:auto;font-family:ui-monospace,SFMono-Regular,Menlo,monospace"></pre>
+        </div>
+
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button type="button" class="mbtn" id="btn-stop-tv-cast" style="display:none;flex:1;background:#FEE2E2;color:#B91C1C;border-color:#FCA5A5">⏹ Ngắt chiếu TV</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="mbtn primary" id="ok-present-modal">✔ Đóng (Tiếp tục giảng trên iPad)</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="ToastBanner" class="toast-banner hidden"></div>
+
+  <script src="./vendor/mqtt.min.js"></script>
+  <script src="./ink_engine.js?v=20261121.170055"></script>
+  <script src="./app.js?v=20261121.170055"></script>
+</body>
+</html>

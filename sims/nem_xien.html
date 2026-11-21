@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mô phỏng Chuyển động Ném xiên</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  body { background: #1e1e24; color: #f0f0f5; padding: 12px; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+  .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .title { font-size: 14px; font-weight: 700; color: #4dabf7; display: flex; align-items: center; gap: 6px; }
+  .badge { background: #2b8a3e; color: #fff; font-size: 10px; padding: 2px 6px; border-radius: 4px; }
+  .canvas-container { position: relative; flex: 1; background: #121216; border-radius: 8px; border: 1px solid #343a40; overflow: hidden; min-height: 180px; }
+  canvas { width: 100%; height: 100%; display: block; }
+  .controls-panel { margin-top: 8px; background: #25262b; border-radius: 8px; padding: 8px 12px; border: 1px solid #373a40; display: flex; flex-direction: column; gap: 6px; }
+  .sliders-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .control-group { display: flex; flex-direction: column; gap: 2px; }
+  .control-label { font-size: 11px; color: #adb5bd; display: flex; justify-content: space-between; }
+  .control-label span.val { color: #ffd43b; font-weight: 600; }
+  input[type="range"] { -webkit-appearance: none; width: 100%; height: 4px; border-radius: 2px; background: #495057; outline: none; }
+  input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: #339af0; cursor: pointer; }
+  .actions-row { display: flex; justify-content: space-between; align-items: center; margin-top: 2px; }
+  .btn-group { display: flex; gap: 6px; }
+  button { background: #3b5bdb; color: #fff; border: none; padding: 5px 12px; font-size: 11px; font-weight: 600; border-radius: 4px; cursor: pointer; transition: 0.2s; }
+  button:hover { background: #4c6ef5; }
+  button.reset { background: #495057; }
+  button.reset:hover { background: #5c636a; }
+  .metrics { font-size: 11px; color: #ced4da; display: flex; gap: 12px; }
+  .metrics b { color: #51cf66; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="title">
+    <span>MÔ PHỎNG NÉM XIÊN VẬT LÍ 10</span>
+    <span class="badge">OFFLINE HTML5</span>
+  </div>
+  <div class="metrics">
+    <div>Hmax: <b id="m_hmax">0.0 m</b></div>
+    <div>L (tầm xa): <b id="m_range">0.0 m</b></div>
+    <div>t: <b id="m_time">0.00 s</b></div>
+  </div>
+</div>
+
+<div class="canvas-container">
+  <canvas id="simCanvas"></canvas>
+</div>
+
+<div class="controls-panel">
+  <div class="sliders-row">
+    <div class="control-group">
+      <div class="control-label">
+        <span>Vận tốc đầu $v_0$</span>
+        <span class="val" id="lbl_v0">20 m/s</span>
+      </div>
+      <input type="range" id="rng_v0" min="5" max="40" value="20" step="1">
+    </div>
+    <div class="control-group">
+      <div class="control-label">
+        <span>Góc ném $\alpha$</span>
+        <span class="val" id="lbl_alpha">45°</span>
+      </div>
+      <input type="range" id="rng_alpha" min="10" max="80" value="45" step="1">
+    </div>
+    <div class="control-group">
+      <div class="control-label">
+        <span>Gia tốc $g$</span>
+        <span class="val" id="lbl_g">9.8 m/s²</span>
+      </div>
+      <input type="range" id="rng_g" min="5" max="15" value="9.8" step="0.2">
+    </div>
+  </div>
+  
+  <div class="actions-row">
+    <div class="btn-group">
+      <button id="btn_play">▶ Phát</button>
+      <button class="reset" id="btn_reset">↺ Đặt lại</button>
+    </div>
+    <div style="font-size: 10px; color: #868e96;">Kéo thanh trượt để đổi thông số trực tiếp</div>
+  </div>
+</div>
+
+<script>
+  const canvas = document.getElementById('simCanvas');
+  const ctx = canvas.getContext('2d');
+  
+  let v0 = 20;
+  let alpha = 45;
+  let g = 9.8;
+  
+  let isRunning = false;
+  let t = 0;
+  let animId = null;
+  let trajectory = [];
+
+  function resizeCanvas() {
+    canvas.width = canvas.parentElement.clientWidth;
+    canvas.height = canvas.parentElement.clientHeight;
+    draw();
+  }
+  window.addEventListener('resize', resizeCanvas);
+
+  function rad(deg) { return deg * Math.PI / 180; }
+
+  function calculateTheoretical() {
+    const a = rad(alpha);
+    const Hmax = (v0 * Math.sin(a)) ** 2 / (2 * g);
+    const L = (v0 ** 2 * Math.sin(2 * a)) / g;
+    const Ttotal = (2 * v0 * Math.sin(a)) / g;
+    document.getElementById('m_hmax').innerText = Hmax.toFixed(1) + ' m';
+    document.getElementById('m_range').innerText = L.toFixed(1) + ' m';
+    return { Hmax, L, Ttotal };
+  }
+
+  function draw() {
+    const w = canvas.width;
+    const h = canvas.height;
+    ctx.clearRect(0, 0, w, h);
+
+    const padLeft = 40;
+    const padBottom = 30;
+    const padTop = 20;
+    const padRight = 30;
+
+    const { Hmax, L } = calculateTheoretical();
+    const maxWorldX = Math.max(50, L * 1.15);
+    const maxWorldY = Math.max(25, Hmax * 1.4);
+
+    const scaleX = (w - padLeft - padRight) / maxWorldX;
+    const scaleY = (h - padBottom - padTop) / maxWorldY;
+    const scale = Math.min(scaleX, scaleY);
+
+    const originX = padLeft;
+    const originY = h - padBottom;
+
+    // Grid & Axis
+    ctx.strokeStyle = '#2c2e33';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let x = 0; x <= maxWorldX; x += 10) {
+      const sx = originX + x * scale;
+      ctx.moveTo(sx, padTop);
+      ctx.lineTo(sx, originY);
+    }
+    for (let y = 0; y <= maxWorldY; y += 10) {
+      const sy = originY - y * scale;
+      ctx.moveTo(originX, sy);
+      ctx.lineTo(w - padRight, sy);
+    }
+    ctx.stroke();
+
+    // Axes
+    ctx.strokeStyle = '#868e96';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(originX, originY);
+    ctx.lineTo(w - padRight, originY);
+    ctx.moveTo(originX, originY);
+    ctx.lineTo(originX, padTop);
+    ctx.stroke();
+
+    // Axis Labels
+    ctx.fillStyle = '#adb5bd';
+    ctx.font = '10px sans-serif';
+    ctx.fillText('x (m)', w - padRight - 15, originY + 18);
+    ctx.fillText('y (m)', originX - 25, padTop + 10);
+
+    // Theoretical Trajectory (dashed)
+    ctx.strokeStyle = '#495057';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    const a = rad(alpha);
+    for (let px = 0; px <= L; px += 0.5) {
+      const py = px * Math.tan(a) - (g * px * px) / (2 * (v0 * Math.cos(a)) ** 2);
+      const sx = originX + px * scale;
+      const sy = originY - py * scale;
+      if (px === 0) ctx.moveTo(sx, sy);
+      else ctx.lineTo(sx, sy);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Actual Trajectory
+    if (trajectory.length > 1) {
+      ctx.strokeStyle = '#74c0fc';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      for (let i = 0; i < trajectory.length; i++) {
+        const sx = originX + trajectory[i].x * scale;
+        const sy = originY - trajectory[i].y * scale;
+        if (i === 0) ctx.moveTo(sx, sy);
+        else ctx.lineTo(sx, sy);
+      }
+      ctx.stroke();
+    }
+
+    // Ball
+    const aRad = rad(alpha);
+    const currX = v0 * Math.cos(aRad) * t;
+    const currY = Math.max(0, v0 * Math.sin(aRad) * t - 0.5 * g * t * t);
+    const ballSX = originX + currX * scale;
+    const ballSY = originY - currY * scale;
+
+    // Velocity Vector
+    const vx = v0 * Math.cos(aRad);
+    const vy = v0 * Math.sin(aRad) - g * t;
+    const vScale = 1.2;
+    ctx.strokeStyle = '#ff6b6b';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(ballSX, ballSY);
+    ctx.lineTo(ballSX + vx * vScale, ballSY - vy * vScale);
+    ctx.stroke();
+
+    ctx.fillStyle = '#ffd43b';
+    ctx.beginPath();
+    ctx.arc(ballSX, ballSY, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#f08c00';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    document.getElementById('m_time').innerText = t.toFixed(2) + ' s';
+  }
+
+  // STATE MACHINE & ANIMATION ENGINE CHUẨN XÁC
+  function stopAnimation() {
+    if (animId) {
+      cancelAnimationFrame(animId);
+      animId = null;
+    }
+    isRunning = false;
+  }
+
+  function updatePlayButtonUI(state) {
+    const btn = document.getElementById('btn_play');
+    if (!btn) return;
+    if (state === 'running') {
+      btn.innerText = '⏸ Tạm dừng';
+      btn.style.background = '#e03131';
+    } else if (state === 'paused') {
+      btn.innerText = '▶ Tiếp tục';
+      btn.style.background = '#2f9e44';
+    } else if (state === 'finished') {
+      btn.innerText = '↺ Phát lại từ đầu';
+      btn.style.background = '#1971c2';
+    } else {
+      btn.innerText = '▶ Bắt đầu phát';
+      btn.style.background = '#3b5bdb';
+    }
+  }
+
+  function startAnimation() {
+    stopAnimation();
+    const { Ttotal } = calculateTheoretical();
+    if (t >= Ttotal - 0.001) {
+      t = 0;
+      trajectory = [];
+    }
+    isRunning = true;
+    updatePlayButtonUI('running');
+    animId = requestAnimationFrame(update);
+  }
+
+  function pauseAnimation() {
+    stopAnimation();
+    updatePlayButtonUI('paused');
+    draw();
+  }
+
+  function resetSimulation() {
+    stopAnimation();
+    t = 0;
+    trajectory = [];
+    updatePlayButtonUI('ready');
+    draw();
+  }
+
+  function replaySimulation() {
+    resetSimulation();
+    startAnimation();
+  }
+
+  function togglePlay() {
+    const { Ttotal } = calculateTheoretical();
+    if (t >= Ttotal - 0.001) {
+      replaySimulation();
+    } else if (isRunning) {
+      pauseAnimation();
+    } else {
+      startAnimation();
+    }
+  }
+
+  function update() {
+    if (!isRunning) return;
+    const aRad = rad(alpha);
+    const { Ttotal } = calculateTheoretical();
+    t += 0.025;
+    const currX = v0 * Math.cos(aRad) * t;
+    const currY = v0 * Math.sin(aRad) * t - 0.5 * g * t * t;
+
+    if (t >= Ttotal || currY < 0) {
+      t = Ttotal;
+      stopAnimation();
+      updatePlayButtonUI('finished');
+      trajectory.push({ x: v0 * Math.cos(aRad) * t, y: 0 });
+    } else {
+      trajectory.push({ x: currX, y: currY });
+      animId = requestAnimationFrame(update);
+    }
+    draw();
+  }
+
+  document.getElementById('btn_play').addEventListener('click', togglePlay);
+  document.getElementById('btn_reset').addEventListener('click', resetSimulation);
+
+  const rV0 = document.getElementById('rng_v0');
+  const rAlpha = document.getElementById('rng_alpha');
+  const rG = document.getElementById('rng_g');
+
+  function updateParams() {
+    v0 = parseFloat(rV0.value);
+    alpha = parseFloat(rAlpha.value);
+    g = parseFloat(rG.value);
+    document.getElementById('lbl_v0').innerText = v0 + ' m/s';
+    document.getElementById('lbl_alpha').innerText = alpha + '°';
+    document.getElementById('lbl_g').innerText = g + ' m/s²';
+
+    resetSimulation();
+  }
+
+  rV0.addEventListener('input', updateParams);
+  rAlpha.addEventListener('input', updateParams);
+  rG.addEventListener('input', updateParams);
+
+  // Expose API cho NKPdf Simulation Engine
+  window.simPlay = startAnimation;
+  window.simPause = pauseAnimation;
+  window.simToggle = togglePlay;
+  window.simReset = resetSimulation;
+  window.simReplay = replaySimulation;
+  window.togglePlay = togglePlay;
+
+  resetSimulation();
+  setTimeout(resizeCanvas, 50);
+</script>
+</body>
+</html>
+

@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mô phỏng Giao thoa sóng cơ 2 nguồn S₁, S₂ — Lớp Lý Thầy Ngọc</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: "Segoe UI", system-ui, sans-serif; }
+  body { background: #0B192C; color: #F8FAFC; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+  .header { background: #1E3E62; padding: 8px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #38BDF8; }
+  .header h2 { font-size: 15px; color: #FEF08A; }
+  .main { flex: 1; display: flex; gap: 10px; padding: 10px; overflow: hidden; }
+  .canvas-box { flex: 1; background: #07111E; border: 1px solid #334155; border-radius: 10px; position: relative; }
+  canvas { width: 100%; height: 100%; display: block; }
+  .controls { width: 280px; background: #1E293B; border: 1px solid #475569; border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+  .ctrl-row { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; }
+  .ctrl-row label { display: flex; justify-content: space-between; font-weight: 600; color: #BAE6FD; }
+  input[type=range] { width: 100%; accent-color: #38BDF8; }
+  .readout { background: #0F172A; border: 1px solid #334155; border-radius: 8px; padding: 10px; font-size: 12px; line-height: 1.65; }
+  .readout b { color: #FEF08A; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <h2>〰️ MÔ PHỎNG GIAO THOA SÓNG CƠ 2 NGUỒN ĐỒNG BỘ S₁, S₂ (VẬT LÍ 11) — LỚP LÝ THẦY NGỌC</h2>
+    <span style="font-size:12px;color:#BAE6FD">d₂ − d₁ = kλ (Cực đại) | (k + 0.5)λ (Cực tiểu)</span>
+  </div>
+  <div class="main">
+    <div class="canvas-box">
+      <canvas id="waveCanvas"></canvas>
+    </div>
+    <div class="controls">
+      <div class="ctrl-row">
+        <label><span>Khoảng cách S₁S₂ (cm):</span><span id="lblD">12.0 cm</span></label>
+        <input type="range" id="slD" min="6" max="22" step="0.5" value="12" />
+      </div>
+      <div class="ctrl-row">
+        <label><span>Bước sóng λ (cm):</span><span id="lblLam">3.0 cm</span></label>
+        <input type="range" id="slLam" min="1.5" max="6.0" step="0.25" value="3.0" />
+      </div>
+      <div class="ctrl-row">
+        <label><span>Tần số f (Hz):</span><span id="lblF">2.0 Hz</span></label>
+        <input type="range" id="slF" min="0.5" max="4.0" step="0.5" value="2.0" />
+      </div>
+      <div class="readout" id="infoBox"></div>
+    </div>
+  </div>
+<script>
+  const canvas = document.getElementById('waveCanvas');
+  const ctx = canvas.getContext('2d');
+  let t = 0;
+  function resize() {
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = canvas.clientWidth * dpr;
+    canvas.height = canvas.clientHeight * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  function draw() {
+    t += 0.03;
+    const D = parseFloat(document.getElementById('slD').value);
+    const lam = parseFloat(document.getElementById('slLam').value);
+    const f = parseFloat(document.getElementById('slF').value);
+    document.getElementById('lblD').textContent = D.toFixed(1) + ' cm';
+    document.getElementById('lblLam').textContent = lam.toFixed(2) + ' cm';
+    document.getElementById('lblF').textContent = f.toFixed(1) + ' Hz';
+
+    const kMax = Math.floor((D - 0.001) / lam);
+    const numMax = 2 * kMax + 1;
+    const numMin = 2 * Math.floor(D / lam - 0.5 + 0.999);
+    document.getElementById('infoBox').innerHTML =
+      `Tốc độ truyền sóng: <b>v = ${(lam * f).toFixed(1)} cm/s</b><br>` +
+      `Tỉ số S₁S₂ / λ = <b>${(D / lam).toFixed(2)}</b><br>` +
+      `Số đường Cực đại (nét liền): <b>${numMax} đường</b> (k = -${kMax}..+${kMax})<br>` +
+      `Số đường Cực tiểu (nét đứt): <b>${numMin} đường</b><br>` +
+      `Khoảng vân trên S₁S₂: <b>λ/2 = ${(lam * 0.5).toFixed(2)} cm</b>`;
+
+    const W = canvas.clientWidth, H = canvas.clientHeight;
+    ctx.clearRect(0, 0, W, H);
+    const cx = W * 0.5, cy = H * 0.5, scale = 18;
+    const s1x = cx - (D * 0.5) * scale, s2x = cx + (D * 0.5) * scale;
+
+    // Vẽ các vòng sóng đồng tâm lan truyền từ S1 và S2
+    ctx.lineWidth = 1;
+    const phase = (t * f * lam) % lam;
+    for (let r = phase; r < 28; r += lam) {
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.22)';
+      ctx.beginPath(); ctx.arc(s1x, cy, r * scale, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(s2x, cy, r * scale, 0, Math.PI * 2); ctx.stroke();
+    }
+
+    // Đoạn thẳng nối S1 - S2
+    ctx.strokeStyle = '#94A3B8'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(s1x - 40, cy); ctx.lineTo(s2x + 40, cy); ctx.stroke();
+
+    // Đường trung trực k = 0
+    ctx.strokeStyle = '#34D399'; ctx.lineWidth = 2.6;
+    ctx.beginPath(); ctx.moveTo(cx, 25); ctx.lineTo(cx, H - 25); ctx.stroke();
+    ctx.fillStyle = '#34D399'; ctx.font = 'bold 12px sans-serif';
+    ctx.fillText('k = 0', cx - 15, 18);
+
+    // Các họ Hyperbol cực đại (nét liền xanh) và cực tiểu (nét đứt đỏ cam)
+    function drawHyperbolaBranch(delta, dashed, color, label) {
+      const a = Math.abs(delta) * 0.5 * scale;
+      const c = (D * 0.5) * scale;
+      if (a >= c * 0.98) return;
+      const b = Math.sqrt(c * c - a * a);
+      const sign = delta > 0 ? 1 : -1;
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = dashed ? 1.8 : 2.3;
+      if (dashed) ctx.setLineDash([6, 4]);
+      ctx.beginPath();
+      for (let s = -1.35; s <= 1.35; s += 0.05) {
+        const px = cx + sign * a * Math.cosh(s);
+        const py = cy + b * Math.sinh(s);
+        if (s === -1.35) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+      ctx.restore();
+      if (label) {
+        ctx.fillStyle = color; ctx.font = 'bold 11px sans-serif';
+        ctx.fillText(label, cx + sign * a * Math.cosh(1.15) - 10, cy - b * Math.sinh(1.15) - 6);
+      }
+    }
+
+    for (let k = 1; k <= kMax; k++) {
+      drawHyperbolaBranch(k * lam, false, '#38BDF8', `k=${k}`);
+      drawHyperbolaBranch(-k * lam, false, '#38BDF8', `k=-${k}`);
+    }
+    for (let k = 0; (k + 0.5) * lam < D; k++) {
+      drawHyperbolaBranch((k + 0.5) * lam, true, '#FB7185', '');
+      drawHyperbolaBranch(-(k + 0.5) * lam, true, '#FB7185', '');
+    }
+
+    // 2 Nguồn S1, S2
+    [{ x: s1x, lbl: 'S₁' }, { x: s2x, lbl: 'S₂' }].forEach((s) => {
+      ctx.fillStyle = '#FEF08A'; ctx.strokeStyle = '#DC2626'; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.arc(s.x, cy, 7, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#FEF08A'; ctx.font = 'bold 14px sans-serif';
+      ctx.fillText(s.lbl, s.x - 8, cy + 24);
+    });
+
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+</script>
+</body>
+</html>

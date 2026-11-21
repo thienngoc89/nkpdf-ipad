@@ -1,0 +1,1754 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>NKPDF 2.9 — Màn hình Trình chiếu TV 16:9 (Không công cụ)</title>
+  <script src="./vendor/mqtt.min.js"></script>
+  <script src="./vendor/pdf.min.js"></script>
+  <script src="./ink_engine.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: #0B192C;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: "Be Vietnam Pro", "Segoe UI", -apple-system, sans-serif;
+    }
+    #tv-viewport {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: #0B192C;
+    }
+    #tv-viewport.hidden { display: none; }
+    #tv-base-canvas, #tv-ink-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    #tv-base-canvas { z-index: 1; background: #FFFFFF; }
+    #tv-ink-canvas { z-index: 2; pointer-events: none; background: transparent; }
+    #tv-video-stage {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: #FFFFFF;
+      z-index: 3;
+    }
+    #tv-video-stage.hidden { display: none; }
+    #tv-video-play-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 48;
+      background: rgba(9, 27, 44, 0.82);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      padding: 24px;
+      text-align: center;
+      color: #F8FAFC;
+    }
+    #tv-video-play-overlay.hidden { display: none; }
+    #tv-video-play-btn {
+      background: #FACC15;
+      color: #0F172A;
+      border: none;
+      border-radius: 999px;
+      padding: 14px 32px;
+      font-size: 20px;
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow: 0 8px 28px rgba(250, 204, 21, 0.45);
+    }
+    #tv-waiting {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      background: radial-gradient(circle at center, #0F3D5E 0%, #091B2C 100%);
+      color: #F8FAFC;
+      text-align: center;
+      padding: 28px;
+    }
+    #tv-waiting.hidden { display: none; }
+    #tv-waiting h1 { font-size: 28px; color: #FDE047; }
+    #tv-waiting p { font-size: 16px; color: #CBD5E1; max-width: 720px; line-height: 1.55; }
+    .code-box {
+      background: rgba(255, 255, 255, 0.1);
+      border: 2px solid #38BDF8;
+      border-radius: 18px;
+      padding: 16px 36px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      min-width: 420px;
+    }
+    .code-box span { font-size: 13px; color: #93C5FD; text-transform: uppercase; letter-spacing: 1px; }
+    #tv-room-code {
+      font-size: 56px;
+      font-weight: 900;
+      letter-spacing: 10px;
+      color: #FFFFFF;
+      font-family: monospace;
+    }
+    #tv-status { font-size: 15px; color: #34D399; font-weight: 700; margin-top: 2px; }
+    #tv-broker-detail {
+      font-size: 12.5px;
+      color: #E2E8F0;
+      background: rgba(15, 23, 42, 0.55);
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      border-radius: 8px;
+      padding: 6px 12px;
+      margin-top: 4px;
+      max-width: 640px;
+      word-break: break-word;
+    }
+    /* Banner chữ vàng lớn khi nhận lệnh TEST từ iPad */
+    #tv-test-banner {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      background: rgba(9, 27, 44, 0.94);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      text-align: center;
+      padding: 24px;
+    }
+    #tv-test-banner.hidden { display: none; }
+    #tv-test-title {
+      font-size: 54px;
+      font-weight: 900;
+      color: #FACC15;
+      text-shadow: 0 4px 24px rgba(250, 204, 21, 0.45);
+      letter-spacing: 2px;
+    }
+    #tv-test-sub {
+      font-size: 20px;
+      color: #34D399;
+      font-weight: 700;
+    }
+    #tv-fs-btn {
+      position: fixed;
+      bottom: 14px;
+      right: 16px;
+      z-index: 20;
+      background: rgba(15, 23, 42, 0.62);
+      color: #F8FAFC;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 999px;
+      padding: 6px 14px;
+      font-size: 12.5px;
+      font-weight: 700;
+      cursor: pointer;
+      opacity: 0.65;
+      transition: opacity 0.15s;
+    }
+    #tv-fs-btn:hover { opacity: 1; }
+    #tv-back-btn {
+      position: fixed;
+      top: 18px;
+      left: 16px;
+      z-index: 30;
+      background: rgba(220, 38, 38, 0.88);
+      color: #FFFFFF;
+      border: 1.5px solid #FCA5A5;
+      border-radius: 999px;
+      padding: 7px 14px;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+      opacity: 0.72;
+    }
+    #tv-back-btn:hover { opacity: 1; }
+    /* P3: Chế độ giả lập toàn màn hình 100vw x 100vh bằng CSS (ẩn toàn bộ thành phần thừa) */
+    body.pseudo-fs, html.pseudo-fs {
+      width: 100vw !important;
+      height: 100vh !important;
+      overflow: hidden !important;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+    body.pseudo-fs #tv-back-btn { display: none !important; }
+    body.pseudo-fs #tv-fs-btn { opacity: 0.22; }
+    body.pseudo-fs #tv-fs-btn:hover { opacity: 0.95; }
+    body.native-fs #tv-back-btn { display: none !important; }
+    body.native-fs #tv-fs-btn { opacity: 0.18; }
+    body.native-fs #tv-fs-btn:hover { opacity: 0.95; }
+    #tv-fs-toast {
+      position: fixed;
+      bottom: 58px;
+      right: 16px;
+      left: 16px;
+      max-width: 680px;
+      margin-left: auto;
+      z-index: 60;
+      background: rgba(15, 23, 42, 0.94);
+      color: #F8FAFC;
+      border: 1.5px solid #38BDF8;
+      border-radius: 14px;
+      padding: 12px 16px;
+      font-size: 13.5px;
+      line-height: 1.5;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    #tv-fs-toast.hidden { display: none; }
+    #tv-fs-toast-close {
+      background: rgba(255, 255, 255, 0.14);
+      color: #FFFFFF;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 8px;
+      padding: 4px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    #tv-diag-btn {
+      position: fixed;
+      bottom: 14px;
+      left: 16px;
+      z-index: 25;
+      background: rgba(15, 23, 42, 0.68);
+      color: #E2E8F0;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      opacity: 0.65;
+    }
+    #tv-diag-btn:hover { opacity: 1; }
+    #tv-diag-panel {
+      position: fixed;
+      bottom: 52px;
+      left: 16px;
+      z-index: 45;
+      max-width: min(560px, 92vw);
+      background: rgba(15, 23, 42, 0.93);
+      color: #E2E8F0;
+      border: 1px solid #38BDF8;
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 11.5px;
+      line-height: 1.45;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      white-space: pre-wrap;
+      word-break: break-word;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+    }
+    #tv-diag-panel.hidden { display: none; }
+    body.pseudo-fs #tv-diag-btn, body.native-fs #tv-diag-btn { opacity: 0.22; }
+    body.pseudo-fs #tv-diag-btn:hover, body.native-fs #tv-diag-btn:hover { opacity: 0.95; }
+  </style>
+</head>
+<body>
+  <div id="tv-viewport" class="hidden">
+    <canvas id="tv-base-canvas"></canvas>
+    <canvas id="tv-ink-canvas"></canvas>
+    <video id="tv-video-stage" class="hidden" playsinline autoplay muted></video>
+  </div>
+  <div id="tv-video-play-overlay" class="hidden">
+    <div id="tv-video-overlay-msg" style="font-size:18px;font-weight:700;max-width:620px;line-height:1.5">📺 Đang nhận luồng Video trực tiếp 16:9 từ iPad...</div>
+    <button id="tv-video-play-btn" type="button">▶ Bắt đầu phát Video 16:9</button>
+    <div id="tv-video-overlay-err" style="font-size:13px;color:#FCA5A5;max-width:640px"></div>
+  </div>
+
+  <div id="tv-test-banner" class="hidden">
+    <div id="tv-test-title">NKPDF — KẾT NỐI THÀNH CÔNG</div>
+    <div id="tv-test-sub">✅ Đã nhận tín hiệu TEST từ iPad &amp; gửi phản hồi ACK hai chiều!</div>
+  </div>
+
+  <div id="tv-waiting">
+    <h1>📺 NKPDF 2.9 — MÀN HÌNH TRÌNH CHIẾU TV 16:9</h1>
+    <div class="code-box">
+      <span>Mã kết nối không dây cho iPad</span>
+      <div id="tv-room-code">....</div>
+      <div id="tv-status">⏳ Đang kiểm tra thư viện MQTT...</div>
+      <div id="tv-broker-detail">Đang khởi tạo...</div>
+    </div>
+    <p>Trên iPad, Thầy bấm nút <b>📺 Trình chiếu</b> → nhập <b>Mã 4 số</b> ở trên rồi bấm <b>🧪 TEST</b> hoặc <b>📡 Chiếu lên TV</b>.<br/>
+    Màn hình TV sẽ hiển thị <b>100% Full 16:9 (0% vạch đen, 0% thanh công cụ)</b>, còn trên iPad vẫn giữ nguyên đầy đủ công cụ!</p>
+  </div>
+  <button id="tv-back-btn">← Quay lại NKPDF</button>
+  <button id="tv-diag-btn" type="button">📊 Chẩn đoán</button>
+  <pre id="tv-diag-panel" class="hidden"></pre>
+  <button id="tv-fs-btn">⛶ Toàn màn hình 16:9</button>
+  <div id="tv-fs-toast" class="hidden" role="status" aria-live="polite">
+    <div id="tv-fs-toast-text" style="flex:1"></div>
+    <button id="tv-fs-toast-close" type="button">Đóng</button>
+  </div>
+
+  <script>
+    (function () {
+      var TV_BUILD_VERSION = '20261121.fix6';
+      var viewport = document.getElementById('tv-viewport');
+      var canvas = document.getElementById('tv-base-canvas');
+      var ctx = canvas.getContext('2d');
+      var inkCanvas = document.getElementById('tv-ink-canvas');
+      var inkCtx = inkCanvas.getContext('2d');
+      var committedInkCanvas = document.createElement('canvas');
+      var committedInkCtx = committedInkCanvas.getContext('2d');
+      var waiting = document.getElementById('tv-waiting');
+      var codeEl = document.getElementById('tv-room-code');
+      var statusEl = document.getElementById('tv-status');
+      var detailEl = document.getElementById('tv-broker-detail');
+      var testBanner = document.getElementById('tv-test-banner');
+      var testSub = document.getElementById('tv-test-sub');
+      var fsBtn = document.getElementById('tv-fs-btn');
+      var backBtn = document.getElementById('tv-back-btn');
+      var diagBtn = document.getElementById('tv-diag-btn');
+      var diagPanel = document.getElementById('tv-diag-panel');
+      var testHideTimer = null;
+
+      // Vùng hiển thị thực tế (giữ nguyên tỉ lệ hình học, không kéo giãn ảnh)
+      var imgRect = { x: 0, y: 0, w: 1280, h: 720 };
+      var lastRenderedImg = null;
+      var lastRenderedBg = '#FFFFFF';
+      var liveStrokes = {}; // strokeId -> { color, nw, alpha, dashed, pts: [[nx,ny], ...], lastSeq, ended }
+      var highestStrokeId = 0;
+      var hasConnectedOnce = false;
+
+      // Trạng thái chẩn đoán thực tế phía TV
+      var tvDiag = {
+        version: TV_BUILD_VERSION,
+        ipadVersion: '',
+        strokeTransport: 'Chưa nhận',
+        imageMode: 'Chưa chiếu',
+        fallbackReason: '',
+        pdfOpened: false,
+        pageReadyKey: '',
+        lastPdfCanvasSize: '0x0',
+        strokeGapCount: 0,
+        strokeDupCount: 0,
+        lastStrokeDrawMs: 0,
+        lastBaseRedrawMs: 0,
+        lastError: ''
+      };
+
+      function refreshTvDiagOverlay() {
+        if (!diagPanel || diagPanel.classList.contains('hidden')) return;
+        var dpr = Math.min(2, window.devicePixelRatio || 1);
+        diagPanel.textContent = [
+          'TV v' + tvDiag.version + (tvDiag.ipadVersion ? (' | iPad v' + tvDiag.ipadVersion) : ''),
+          'Đường truyền nét bút: ' + tvDiag.strokeTransport,
+          'Chế độ hình: ' + tvDiag.imageMode + (tvDiag.fallbackReason ? (' (' + tvDiag.fallbackReason + ')') : ''),
+          'PDF opened=' + tvDiag.pdfOpened + ' | pageReady=' + (tvDiag.pageReadyKey || '-'),
+          'Viewport: ' + window.innerWidth + 'x' + window.innerHeight + ' DPR=' + dpr + ' | Canvas: ' + canvas.width + 'x' + canvas.height + ' | PDF: ' + tvDiag.lastPdfCanvasSize,
+          'Xử lý nét: ' + tvDiag.lastStrokeDrawMs + 'ms | Vẽ nền: ' + tvDiag.lastBaseRedrawMs + 'ms | Thiếu/Trùng điểm: ' + tvDiag.strokeGapCount + '/' + tvDiag.strokeDupCount,
+          'Lỗi gần nhất: ' + (tvDiag.lastError || 'Không')
+        ].join('\n');
+      }
+      if (diagBtn && diagPanel) {
+        diagBtn.addEventListener('click', function () {
+          diagPanel.classList.toggle('hidden');
+          refreshTvDiagOverlay();
+        });
+      }
+      window.__nkpdfTvDiag = { getState: function () { return Object.assign({}, tvDiag); } };
+
+      // Vector PDF + Vector Ink Native Renderer trên TV (tách pdfOpened vs pageReady + gộp view_sync theo rAF)
+      if (window.pdfjsLib && pdfjsLib.GlobalWorkerOptions) {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = './vendor/pdf.worker.min.js';
+      }
+      var tvDocState = {
+        pdfHash: '',
+        pdfDoc: null,
+        pdfOpened: false,
+        chunks: [],
+        totalChunks: 0,
+        receivedChunks: 0,
+        pageCache: {},      // key: pdfPageNo + '_' + rot + '_' + targetW -> { canvas, width, height, targetW }
+        renderingKeys: {},  // key -> true
+        view: null,         // last view_sync payload
+        lastBaseKey: '',    // dùng để tránh vẽ lại #tv-base-canvas nếu viewport không đổi
+        viewRafId: 0,
+        annotsBySid: {},    // sid -> array of NKInkEngine objects
+        committedDocVer: 0
+      };
+      var annotsChunkAcc = {}; // msgId -> { chunks, total }
+
+      function clearTvPageCache() {
+        var ks = Object.keys(tvDocState.pageCache);
+        for (var i = 0; i < ks.length; i++) {
+          var c = tvDocState.pageCache[ks[i]] && tvDocState.pageCache[ks[i]].canvas;
+          if (c) { c.width = 0; c.height = 0; }
+        }
+        tvDocState.pageCache = {};
+        tvDocState.renderingKeys = {};
+        tvDocState.lastBaseKey = '';
+        tvDiag.pageReadyKey = '';
+      }
+
+      function evictTvPageCache(keepKeys) {
+        var ks = Object.keys(tvDocState.pageCache);
+        if (ks.length <= 2) return;
+        for (var i = 0; i < ks.length; i++) {
+          if (keepKeys.indexOf(ks[i]) === -1) {
+            var c = tvDocState.pageCache[ks[i]] && tvDocState.pageCache[ks[i]].canvas;
+            if (c) { c.width = 0; c.height = 0; }
+            delete tvDocState.pageCache[ks[i]];
+            if (Object.keys(tvDocState.pageCache).length <= 2) break;
+          }
+        }
+      }
+
+      function computeTargetPdfWidth() {
+        var cw = canvas.width || 1920;
+        // Chỉ dựng độ phân giải tương ứng với vùng hiển thị thực tế, giới hạn bộ nhớ Smart TV <= 2560px
+        return Math.min(2560, Math.max(1280, cw));
+      }
+
+      function ensureTvNativePdfPage(pdfPageNo, rotPref, onReady) {
+        if (!tvDocState.pdfOpened || !tvDocState.pdfDoc || !pdfPageNo) return null;
+        var targetW = computeTargetPdfWidth();
+        var key = pdfPageNo + '_' + (rotPref || 0) + '_' + targetW;
+        if (tvDocState.pageCache[key]) return tvDocState.pageCache[key];
+        if (tvDocState.renderingKeys[key]) return null;
+        tvDocState.renderingKeys[key] = true;
+
+        tvDocState.pdfDoc.getPage(pdfPageNo).then(function (page) {
+          var rot = (page.rotate + (rotPref || 0)) % 360;
+          var baseVp = page.getViewport({ scale: 1.0, rotation: rot });
+          var scale = Math.max(1.25, targetW / Math.max(1, baseVp.width));
+          // Giới hạn tổng số pixel <= 16 triệu px (~64MB RGBA) để không tràn RAM Smart TV
+          var estW = baseVp.width * scale;
+          var estH = baseVp.height * scale;
+          if (estW * estH > 16000000) {
+            scale = scale * Math.sqrt(16000000 / (estW * estH));
+          }
+          var rvp = page.getViewport({ scale: scale, rotation: rot });
+          var off = document.createElement('canvas');
+          off.width = Math.round(rvp.width);
+          off.height = Math.round(rvp.height);
+          var octx = off.getContext('2d');
+          octx.fillStyle = '#FFFFFF';
+          octx.fillRect(0, 0, off.width, off.height);
+          return page.render({ canvasContext: octx, viewport: rvp }).promise.then(function () {
+            delete tvDocState.renderingKeys[key];
+            evictTvPageCache([key]);
+            tvDocState.pageCache[key] = { canvas: off, width: off.width, height: off.height, targetW: targetW };
+            tvDiag.lastPdfCanvasSize = off.width + 'x' + off.height;
+            if (typeof onReady === 'function') onReady(off.width, off.height);
+          });
+        }).catch(function (err) {
+          delete tvDocState.renderingKeys[key];
+          tvDiag.lastError = 'PDF render page ' + pdfPageNo + ': ' + (err && err.message ? err.message : String(err));
+          refreshTvDiagOverlay();
+        });
+        return null;
+      }
+
+      function drawVectorAnnotsToCommitted(sid, scaleCssToTv, offsetX, offsetY, clipRect) {
+        if (!window.NKInkEngine) return;
+        var list = tvDocState.annotsBySid[sid];
+        if (!list || !list.length) return;
+        committedInkCtx.save();
+        if (clipRect) {
+          committedInkCtx.beginPath();
+          committedInkCtx.rect(clipRect.x, clipRect.y, clipRect.w, clipRect.h);
+          committedInkCtx.clip();
+        }
+        committedInkCtx.setTransform(scaleCssToTv, 0, 0, scaleCssToTv, offsetX, offsetY);
+        for (var i = 0; i < list.length; i++) {
+          NKInkEngine.drawObject(committedInkCtx, list[i], false, false);
+        }
+        committedInkCtx.restore();
+      }
+
+      function redrawCommittedInkLayerOnly() {
+        committedInkCtx.clearRect(0, 0, committedInkCanvas.width, committedInkCanvas.height);
+        var v = tvDocState.view;
+        if (v && v.mode === 'pdf' && tvDocState.pdfOpened && tvDocState.pdfHash === v.pdfHash) {
+          var cssW = Math.max(1, v.cssWidth || 600);
+          if (v.presentMode === 'full_page') {
+            var cssToTvFull = imgRect.w / cssW;
+            drawVectorAnnotsToCommitted(v.pno, cssToTvFull, imgRect.x, imgRect.y, imgRect);
+          } else {
+            var cssToTv = imgRect.w / cssW;
+            var drawH = imgRect.mainDrawH || imgRect.h;
+            drawVectorAnnotsToCommitted(
+              v.pno,
+              cssToTv,
+              imgRect.x,
+              imgRect.y - (v.visOffsetCss || 0) * cssToTv,
+              { x: imgRect.x, y: imgRect.y, w: imgRect.w, h: drawH }
+            );
+            if (imgRect.nextGapY && v.nextPdfPageNo) {
+              var nextCssToTv = imgRect.w / Math.max(1, v.nextCssWidth || cssW);
+              drawVectorAnnotsToCommitted(
+                v.pno + 1,
+                nextCssToTv,
+                imgRect.x,
+                imgRect.nextGapY,
+                { x: imgRect.x, y: imgRect.nextGapY, w: imgRect.w, h: imgRect.nextRemH }
+              );
+            }
+          }
+        }
+        // Composite lớp nét đã chốt lên inkCanvas rồi vẽ thêm nét đang viết (liveStrokes)
+        inkCtx.clearRect(0, 0, inkCanvas.width, inkCanvas.height);
+        if (committedInkCanvas.width > 0 && committedInkCanvas.height > 0) {
+          inkCtx.drawImage(committedInkCanvas, 0, 0);
+        }
+        redrawLiveStrokesOnly();
+      }
+
+      function renderNativeVectorView(notifyPageReadyFn) {
+        var v = tvDocState.view;
+        if (!v || v.mode !== 'pdf' || !tvDocState.pdfOpened || !tvDocState.pdfDoc || tvDocState.pdfHash !== v.pdfHash) {
+          return false;
+        }
+        var entry = ensureTvNativePdfPage(v.pdfPageNo, v.rot || 0, function (pw, ph) {
+          scheduleNativeViewRender(notifyPageReadyFn);
+        });
+        if (!entry) return false;
+
+        if (testBanner) testBanner.classList.add('hidden');
+        waiting.classList.add('hidden');
+        viewport.classList.remove('hidden');
+        backBtn.style.opacity = '0.2';
+
+        var cw = canvas.width, ch = canvas.height;
+        var sw = entry.width, sh = entry.height;
+        var baseKey = [v.pdfHash, v.pno, v.pdfPageNo, v.rot || 0, v.visOffsetCss || 0, v.presentMode, v.nextPdfPageNo || 0, cw, ch, sw, sh].join('|');
+
+        if (tvDocState.lastBaseKey !== baseKey) {
+          var tBase0 = performance.now();
+          if (v.presentMode === 'full_page') {
+            computeImgRect(sw, sh);
+            imgRect.mainDrawH = imgRect.h;
+            imgRect.nextGapY = 0;
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, 0, cw, ch);
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(entry.canvas, imgRect.x, imgRect.y, imgRect.w, imgRect.h);
+          } else {
+            computeImgRect(16, 9);
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, 0, cw, ch);
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+
+            var baseScale = sw / Math.max(1, v.cssWidth || 600);
+            var srcY = Math.max(0, Math.min(sh - 10, Math.round((v.visOffsetCss || 0) * baseScale)));
+            var cropH = Math.round(sw * (9 / 16));
+            var availH = Math.max(10, Math.min(cropH, sh - srcY));
+            var drawH = Math.round((availH / cropH) * imgRect.h);
+            imgRect.mainDrawH = drawH;
+            imgRect.nextGapY = 0;
+
+            ctx.drawImage(entry.canvas, 0, srcY, sw, availH, imgRect.x, imgRect.y, imgRect.w, drawH);
+
+            if (availH < cropH && v.nextPdfPageNo) {
+              var nextEntry = ensureTvNativePdfPage(v.nextPdfPageNo, v.nextRot || 0, function () {
+                scheduleNativeViewRender(notifyPageReadyFn);
+              });
+              var gap = Math.max(4, Math.round(imgRect.h * 0.007));
+              var remH = imgRect.h - drawH - gap;
+              if (nextEntry && remH > 16) {
+                var nextSrcH = Math.min(nextEntry.height, Math.round((remH / imgRect.h) * nextEntry.width * (9 / 16)));
+                ctx.fillStyle = '#E2E8F0';
+                ctx.fillRect(imgRect.x, imgRect.y + drawH, imgRect.w, gap);
+                ctx.drawImage(nextEntry.canvas, 0, 0, nextEntry.width, nextSrcH, imgRect.x, imgRect.y + drawH + gap, imgRect.w, remH);
+                imgRect.nextGapY = imgRect.y + drawH + gap;
+                imgRect.nextRemH = remH;
+              }
+            }
+          }
+          tvDocState.lastBaseKey = baseKey;
+          tvDiag.lastBaseRedrawMs = Math.round((performance.now() - tBase0) * 10) / 10;
+          redrawCommittedInkLayerOnly();
+        }
+
+        tvDiag.imageMode = 'PDF tự dựng';
+        tvDiag.fallbackReason = '';
+        var readyKey = v.pdfHash + ':' + v.pno;
+        if (tvDiag.pageReadyKey !== readyKey) {
+          tvDiag.pageReadyKey = readyKey;
+          if (typeof notifyPageReadyFn === 'function') {
+            notifyPageReadyFn({
+              type: 'page_ready',
+              roomCode: roomCode,
+              pdfHash: v.pdfHash,
+              pno: v.pno,
+              pdfSize: entry.width + 'x' + entry.height,
+              canvasSize: cw + 'x' + ch,
+              viewport: window.innerWidth + 'x' + window.innerHeight,
+              dpr: Math.min(2, window.devicePixelRatio || 1),
+              tvVersion: TV_BUILD_VERSION
+            });
+          }
+        }
+        refreshTvDiagOverlay();
+        return true;
+      }
+
+      var pendingPageReadyAck = null;
+      function scheduleNativeViewRender(notifyPageReadyFn) {
+        if (typeof notifyPageReadyFn === 'function') pendingPageReadyAck = notifyPageReadyFn;
+        if (tvDocState.viewRafId) return;
+        tvDocState.viewRafId = requestAnimationFrame(function () {
+          tvDocState.viewRafId = 0;
+          renderNativeVectorView(pendingPageReadyAck);
+        });
+      }
+
+      // P1: Tự kiểm tra trình duyệt TV có hỗ trợ giải mã WebP không để báo về iPad
+      var tvSupportsWebP = false;
+      (function detectWebP() {
+        try {
+          var probe = new Image();
+          probe.onload = function () { tvSupportsWebP = (probe.width === 1 && probe.height === 1); };
+          probe.onerror = function () { tvSupportsWebP = false; };
+          probe.src = 'data:image/webp;base64,UklGRh4AAABXRUJQVlA4TBEAAAAvAAAAAAfQ//73v/+BiOh/AAA=';
+        } catch (e) { tvSupportsWebP = false; }
+      })();
+
+      function getTvCapabilities() {
+        var dpr = Math.min(2, window.devicePixelRatio || 1);
+        return {
+          tvVersion: TV_BUILD_VERSION,
+          webp: tvSupportsWebP,
+          screenW: Math.round((window.innerWidth || 1280) * dpr),
+          screenH: Math.round((window.innerHeight || 720) * dpr),
+          dpr: dpr
+        };
+      }
+
+      function resizeStage() {
+        var dpr = Math.min(2, window.devicePixelRatio || 1);
+        var cw = Math.max(1, Math.round(window.innerWidth * dpr));
+        var ch = Math.max(1, Math.round(window.innerHeight * dpr));
+        canvas.width = cw;
+        canvas.height = ch;
+        inkCanvas.width = cw;
+        inkCanvas.height = ch;
+        committedInkCanvas.width = cw;
+        committedInkCanvas.height = ch;
+        tvDocState.lastBaseKey = '';
+        if (tvDocState.view && renderNativeVectorView(pendingPageReadyAck)) {
+          return;
+        }
+        if (lastRenderedImg) {
+          drawBaseImage(lastRenderedImg, lastRenderedBg);
+        } else {
+          computeImgRect(16, 9);
+        }
+        redrawAllLiveStrokes();
+      }
+
+      function computeImgRect(srcW, srcH) {
+        var cw = canvas.width, ch = canvas.height;
+        if (!srcW || !srcH) {
+          imgRect = { x: 0, y: 0, w: cw, h: ch };
+          return;
+        }
+        var scale = Math.min(cw / srcW, ch / srcH);
+        var dw = Math.round(srcW * scale);
+        var dh = Math.round(srcH * scale);
+        var dx = Math.round((cw - dw) * 0.5);
+        var dy = Math.round((ch - dh) * 0.5);
+        imgRect = { x: dx, y: dy, w: dw, h: dh };
+      }
+
+      function drawBaseImage(img, bg) {
+        var tDraw0 = performance.now();
+        var cw = canvas.width, ch = canvas.height;
+        computeImgRect(img.naturalWidth || img.width, img.naturalHeight || img.height);
+        ctx.fillStyle = bg || '#FFFFFF';
+        ctx.fillRect(0, 0, cw, ch);
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(img, imgRect.x, imgRect.y, imgRect.w, imgRect.h);
+        return performance.now() - tDraw0;
+      }
+
+      function drawStrokeSegment(st, idx) {
+        var pts = st.pts;
+        if (!pts || pts.length < 1) return;
+        inkCtx.save();
+        inkCtx.strokeStyle = st.color || '#0F172A';
+        inkCtx.fillStyle = st.color || '#0F172A';
+        inkCtx.lineWidth = Math.max(1.5, (st.nw || 0.0025) * imgRect.w);
+        inkCtx.lineCap = 'round';
+        inkCtx.lineJoin = 'round';
+        inkCtx.globalAlpha = typeof st.alpha === 'number' ? st.alpha : 1.0;
+        if (st.dashed) inkCtx.setLineDash([inkCtx.lineWidth * 3.5, inkCtx.lineWidth * 2.5]);
+
+        if (pts.length === 1) {
+          var x0 = imgRect.x + pts[0][0] * imgRect.w;
+          var y0 = imgRect.y + pts[0][1] * imgRect.h;
+          inkCtx.beginPath();
+          inkCtx.arc(x0, y0, inkCtx.lineWidth * 0.5, 0, Math.PI * 2);
+          inkCtx.fill();
+        } else if (idx >= 2) {
+          var p0 = pts[idx - 2], p1 = pts[idx - 1], p2 = pts[idx];
+          var x0 = imgRect.x + p0[0] * imgRect.w, y0 = imgRect.y + p0[1] * imgRect.h;
+          var x1 = imgRect.x + p1[0] * imgRect.w, y1 = imgRect.y + p1[1] * imgRect.h;
+          var x2 = imgRect.x + p2[0] * imgRect.w, y2 = imgRect.y + p2[1] * imgRect.h;
+          var mx1 = (x0 + x1) * 0.5, my1 = (y0 + y1) * 0.5;
+          var mx2 = (x1 + x2) * 0.5, my2 = (y1 + y2) * 0.5;
+          inkCtx.beginPath();
+          inkCtx.moveTo(mx1, my1);
+          inkCtx.quadraticCurveTo(x1, y1, mx2, my2);
+          inkCtx.stroke();
+        } else {
+          var pa = pts[idx - 1], pb = pts[idx];
+          inkCtx.beginPath();
+          inkCtx.moveTo(imgRect.x + pa[0] * imgRect.w, imgRect.y + pa[1] * imgRect.h);
+          inkCtx.lineTo(imgRect.x + pb[0] * imgRect.w, imgRect.y + pb[1] * imgRect.h);
+          inkCtx.stroke();
+        }
+        inkCtx.restore();
+      }
+
+      function redrawLiveStrokesOnly() {
+        var keys = Object.keys(liveStrokes);
+        for (var k = 0; k < keys.length; k++) {
+          var st = liveStrokes[keys[k]];
+          if (!st || !st.pts || !st.pts.length) continue;
+          if (st.pts.length === 1) {
+            drawStrokeSegment(st, 0);
+          } else {
+            for (var i = 1; i < st.pts.length; i++) drawStrokeSegment(st, i);
+          }
+        }
+      }
+
+      function redrawAllLiveStrokes() {
+        if (tvDocState.view && tvDocState.pdfOpened && tvDiag.pageReadyKey === (tvDocState.view.pdfHash + ':' + tvDocState.view.pno)) {
+          redrawCommittedInkLayerOnly();
+          return;
+        }
+        inkCtx.clearRect(0, 0, inkCanvas.width, inkCanvas.height);
+        redrawLiveStrokesOnly();
+      }
+
+      function clearCommittedLiveStrokes(upToStrokeId) {
+        var keys = Object.keys(liveStrokes);
+        var changed = false;
+        for (var k = 0; k < keys.length; k++) {
+          var id = Number(keys[k]);
+          if (!upToStrokeId || id <= upToStrokeId) {
+            delete liveStrokes[keys[k]];
+            changed = true;
+          }
+        }
+        if (changed) redrawAllLiveStrokes();
+      }
+
+      resizeStage();
+      window.addEventListener('resize', resizeStage);
+
+      function renderDataFrame(msg, ackPublishFn) {
+        if (!msg || !msg.dataUrl) return;
+        if (testBanner) testBanner.classList.add('hidden');
+        waiting.classList.add('hidden');
+        viewport.classList.remove('hidden');
+        backBtn.style.opacity = '0.2';
+        tvDiag.imageMode = 'Ảnh dự phòng';
+        if (msg.fallbackReason) tvDiag.fallbackReason = msg.fallbackReason;
+
+        var tDec0 = performance.now();
+        var img = new Image();
+        img.onload = function () {
+          var decodeMs = Math.round((performance.now() - tDec0) * 10) / 10;
+          lastRenderedImg = img;
+          lastRenderedBg = msg.bg || '#FFFFFF';
+          tvDocState.lastBaseKey = '';
+          var drawMs = Math.round(drawBaseImage(img, lastRenderedBg) * 10) / 10;
+          if (msg.clearInk) {
+            clearCommittedLiveStrokes(msg.lastStrokeId || highestStrokeId);
+          }
+          refreshTvDiagOverlay();
+          if (typeof ackPublishFn === 'function') {
+            ackPublishFn({
+              type: 'frame_ack',
+              roomCode: roomCode,
+              frameId: msg.frameId || 0,
+              decodeMs: decodeMs,
+              drawMs: drawMs,
+              imageMode: tvDiag.imageMode,
+              ts: Date.now()
+            });
+          }
+        };
+        img.src = msg.dataUrl;
+      }
+
+      function drawStrokeTailSegment(st) {
+        var pts = st.pts;
+        if (!pts || pts.length < 2) return;
+        var n = pts.length;
+        inkCtx.save();
+        inkCtx.strokeStyle = st.color || '#0F172A';
+        inkCtx.lineWidth = Math.max(1.5, (st.nw || 0.0025) * imgRect.w);
+        inkCtx.lineCap = 'round';
+        inkCtx.lineJoin = 'round';
+        inkCtx.globalAlpha = typeof st.alpha === 'number' ? st.alpha : 1.0;
+        if (st.dashed) inkCtx.setLineDash([inkCtx.lineWidth * 3.5, inkCtx.lineWidth * 2.5]);
+        var pa = pts[n - 2], pb = pts[n - 1];
+        var mx = imgRect.x + ((pa[0] + pb[0]) * 0.5) * imgRect.w;
+        var my = imgRect.y + ((pa[1] + pb[1]) * 0.5) * imgRect.h;
+        var ex = imgRect.x + pb[0] * imgRect.w;
+        var ey = imgRect.y + pb[1] * imgRect.h;
+        inkCtx.beginPath();
+        inkCtx.moveTo(n >= 3 ? mx : (imgRect.x + pa[0] * imgRect.w), n >= 3 ? my : (imgRect.y + pa[1] * imgRect.h));
+        inkCtx.lineTo(ex, ey);
+        inkCtx.stroke();
+        inkCtx.restore();
+      }
+
+      function handleStrokeDelta(msg, ackPublishFn, isRtc) {
+        if (!msg || !msg.strokeId) return;
+        var t0 = performance.now();
+        var sid = Number(msg.strokeId);
+        if (sid > highestStrokeId) highestStrokeId = sid;
+        tvDiag.strokeTransport = isRtc ? 'WebRTC' : 'MQTT';
+
+        if (msg.type === 'stroke_start' && msg.pt) {
+          liveStrokes[sid] = {
+            color: msg.color || '#0F172A',
+            nw: msg.nw || 0.0025,
+            alpha: typeof msg.alpha === 'number' ? msg.alpha : 1.0,
+            dashed: Boolean(msg.dashed),
+            pts: [msg.pt],
+            lastSeq: typeof msg.seq === 'number' ? msg.seq : 0,
+            ended: false
+          };
+          if (testBanner) testBanner.classList.add('hidden');
+          waiting.classList.add('hidden');
+          viewport.classList.remove('hidden');
+          drawStrokeSegment(liveStrokes[sid], 0);
+        } else if (msg.type === 'stroke_pts' && Array.isArray(msg.pts)) {
+          var st = liveStrokes[sid];
+          if (st) {
+            if (typeof msg.seqStart === 'number') {
+              var expected = st.lastSeq + 1;
+              if (msg.seqStart > expected) tvDiag.strokeGapCount += (msg.seqStart - expected);
+              else if (msg.seqStart < expected) tvDiag.strokeDupCount += (expected - msg.seqStart);
+              st.lastSeq = msg.seqStart + msg.pts.length - 1;
+            }
+            var startIdx = st.pts.length;
+            for (var i = 0; i < msg.pts.length; i++) {
+              st.pts.push(msg.pts[i]);
+              drawStrokeSegment(st, startIdx + i);
+            }
+          }
+        } else if (msg.type === 'stroke_end') {
+          var stEnd = liveStrokes[sid];
+          if (stEnd) {
+            stEnd.ended = true;
+            // Vẽ nốt nửa đoạn cuối từ điểm giữa tới đúng điểm nhấc bút để đuôi nét không bị hụt
+            drawStrokeTailSegment(stEnd);
+          }
+        }
+
+        var drawMs = Math.round((performance.now() - t0) * 10) / 10;
+        tvDiag.lastStrokeDrawMs = drawMs;
+        refreshTvDiagOverlay();
+        if (msg.seqKey && typeof ackPublishFn === 'function') {
+          ackPublishFn({
+            type: 'stroke_ack',
+            roomCode: roomCode,
+            strokeId: sid,
+            seqKey: msg.seqKey,
+            drawMs: drawMs,
+            ts: Date.now()
+          });
+        }
+      }
+
+      function showTestSuccessOnTv(brokerName, roomCode) {
+        if (!testBanner) return;
+        testBanner.classList.remove('hidden');
+        if (testSub) {
+          testSub.textContent = '✅ Mã phòng ' + roomCode + ' • Broker: ' + brokerName + ' • Đã gửi ACK về iPad!';
+        }
+        if (testHideTimer) clearTimeout(testHideTimer);
+        testHideTimer = setTimeout(function () {
+          testBanner.classList.add('hidden');
+        }, 6000);
+      }
+
+      backBtn.addEventListener('click', function () {
+        if (window.opener && !window.opener.closed) window.close();
+        else if (window.history.length > 1) window.history.back();
+        else window.location.replace('./index.html');
+      });
+
+      // P3: Bộ điều khiển Toàn màn hình 16:9 trung thực (Native Fullscreen API + Fallback CSS 100vw×100vh + Hướng dẫn Samsung Tizen / Smart TV)
+      var fsToast = document.getElementById('tv-fs-toast');
+      var fsToastText = document.getElementById('tv-fs-toast-text');
+      var fsToastClose = document.getElementById('tv-fs-toast-close');
+      var fsToastTimer = null;
+      var pseudoFsActive = false;
+
+      function showFsToast(htmlMsg, durationMs) {
+        if (!fsToast || !fsToastText) return;
+        fsToastText.innerHTML = htmlMsg;
+        fsToast.classList.remove('hidden');
+        if (fsToastTimer) clearTimeout(fsToastTimer);
+        fsToastTimer = setTimeout(function () {
+          fsToast.classList.add('hidden');
+        }, durationMs || 8500);
+      }
+      if (fsToastClose) {
+        fsToastClose.addEventListener('click', function () {
+          if (fsToast) fsToast.classList.add('hidden');
+          if (fsToastTimer) { clearTimeout(fsToastTimer); fsToastTimer = null; }
+        });
+      }
+
+      function getFullscreenElement() {
+        return document.fullscreenElement ||
+          document.webkitFullscreenElement ||
+          document.mozFullScreenElement ||
+          document.msFullscreenElement ||
+          null;
+      }
+
+      function isFullscreenApiEnabled() {
+        var flag = document.fullscreenEnabled;
+        if (typeof flag === 'undefined') flag = document.webkitFullscreenEnabled;
+        if (typeof flag === 'undefined') flag = document.mozFullScreenEnabled;
+        if (typeof flag === 'undefined') flag = document.msFullscreenEnabled;
+        var el = document.documentElement;
+        var hasMethod = Boolean(
+          el.requestFullscreen ||
+          el.webkitRequestFullscreen ||
+          el.mozRequestFullScreen ||
+          el.msRequestFullscreen
+        );
+        return Boolean(hasMethod && (flag !== false));
+      }
+
+      function updateFsUi() {
+        var nativeFs = Boolean(getFullscreenElement());
+        if (nativeFs) {
+          pseudoFsActive = false;
+          document.documentElement.classList.remove('pseudo-fs');
+          document.body.classList.remove('pseudo-fs');
+          document.body.classList.add('native-fs');
+          fsBtn.textContent = '⛌ Thoát toàn màn hình';
+        } else if (pseudoFsActive) {
+          document.body.classList.remove('native-fs');
+          document.documentElement.classList.add('pseudo-fs');
+          document.body.classList.add('pseudo-fs');
+          fsBtn.textContent = '⛌ Thoát chế độ 100vw×100vh (Giả lập)';
+        } else {
+          document.body.classList.remove('native-fs');
+          document.documentElement.classList.remove('pseudo-fs');
+          document.body.classList.remove('pseudo-fs');
+          fsBtn.textContent = '⛶ Toàn màn hình 16:9';
+        }
+        resizeStage();
+      }
+
+      function enterPseudoFullscreenWithGuide(reason) {
+        pseudoFsActive = true;
+        updateFsUi();
+        var ua = navigator.userAgent || '';
+        var isTizen = /Tizen|SMART-TV|SamsungBrowser/i.test(ua);
+        var tvTip = isTizen
+          ? '<b>Trên Samsung TV (Tizen):</b> bấm nút <b>▲</b> trên điều khiển lên thanh địa chỉ trình duyệt → chọn biểu tượng <b>Toàn màn hình (⛶)</b>, hoặc mở <b>Menu/Tools → Ẩn thanh địa chỉ</b>.'
+          : '<b>Trên Smart TV / Trình duyệt hạn chế:</b> bấm <b>F11</b> (máy tính) hoặc dùng điều khiển TV chọn biểu tượng <b>Toàn màn hình / Ẩn thanh địa chỉ</b> của trình duyệt TV.';
+        showFsToast(
+          '⚠️ <b>Trình duyệt này không cho phép Fullscreen API</b> (' + reason + ').<br/>' +
+          'Đã bật chế độ <b>tối đa hóa 100vw×100vh (giả lập — ẩn nút thừa, thanh trình duyệt TV nếu có vẫn giữ nguyên)</b>.<br/>' +
+          tvTip,
+          10000
+        );
+      }
+
+      function requestNativeFullscreen() {
+        var el = document.documentElement;
+        var req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+        if (!isFullscreenApiEnabled() || !req) {
+          enterPseudoFullscreenWithGuide('Fullscreen API không khả dụng trên trình duyệt này');
+          return;
+        }
+        try {
+          var ret = req.call(el);
+          if (ret && typeof ret.then === 'function') {
+            ret.then(function () {
+              // Xác minh lại thực sự đã vào fullscreen element chưa (một số TV resolve promise nhưng không vào fullscreen)
+              setTimeout(function () {
+                if (getFullscreenElement()) {
+                  updateFsUi();
+                  showFsToast('✅ Đã bật <b>Toàn màn hình thực 16:9</b> (Fullscreen API).', 3500);
+                } else {
+                  enterPseudoFullscreenWithGuide('Trình duyệt từ chối hoặc bỏ qua yêu cầu toàn màn hình');
+                }
+              }, 120);
+            }).catch(function (err) {
+              var msg = (err && (err.message || err.name)) ? (err.name + ': ' + err.message) : 'Bị chặn bởi trình duyệt';
+              enterPseudoFullscreenWithGuide(msg);
+            });
+          } else {
+            // Trình duyệt webkit cũ không trả về Promise
+            setTimeout(function () {
+              if (getFullscreenElement()) {
+                updateFsUi();
+                showFsToast('✅ Đã bật <b>Toàn màn hình thực 16:9</b>.', 3500);
+              } else {
+                enterPseudoFullscreenWithGuide('WebKit Fullscreen không kích hoạt trên thiết bị này');
+              }
+            }, 250);
+          }
+        } catch (err) {
+          var emsg = (err && err.message) ? err.message : 'Lỗi gọi Fullscreen API';
+          enterPseudoFullscreenWithGuide(emsg);
+        }
+      }
+
+      function exitAnyFullscreen() {
+        if (getFullscreenElement()) {
+          var ex = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
+          if (ex) {
+            try {
+              var ret = ex.call(document);
+              if (ret && typeof ret.catch === 'function') ret.catch(function () {});
+            } catch (e) {}
+          }
+        }
+        if (pseudoFsActive) {
+          pseudoFsActive = false;
+          updateFsUi();
+          showFsToast('ℹ️ Đã thoát chế độ tối đa hóa 100vw×100vh (giả lập).', 2800);
+        }
+      }
+
+      ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange'].forEach(function (evName) {
+        document.addEventListener(evName, updateFsUi);
+      });
+      ['fullscreenerror', 'webkitfullscreenerror', 'mozfullscreenerror', 'MSFullscreenError'].forEach(function (evName) {
+        document.addEventListener(evName, function () {
+          enterPseudoFullscreenWithGuide('Sự kiện fullscreenerror từ trình duyệt');
+        });
+      });
+
+      fsBtn.addEventListener('click', function () {
+        if (getFullscreenElement() || pseudoFsActive) {
+          exitAnyFullscreen();
+        } else {
+          requestNativeFullscreen();
+        }
+      });
+
+      window.__nkpdfTvFullscreen = {
+        getState: function () {
+          return {
+            apiEnabled: isFullscreenApiEnabled(),
+            isNativeFullscreen: Boolean(getFullscreenElement()),
+            isPseudoFullscreen: pseudoFsActive,
+            buttonText: fsBtn.textContent
+          };
+        }
+      };
+
+      // 1. Tạo mã phòng 4 số
+      var roomCode = String(Math.floor(1000 + Math.random() * 9000));
+      codeEl.textContent = roomCode;
+      var topicCmd = 'nkpdf29/tv/' + roomCode;
+      var topicAck = 'nkpdf29/tv/' + roomCode + '/ack';
+
+      // 2. Kiểm tra thư viện mqtt.min.js đã tải và khởi tạo thành công chưa
+      if (!window.mqtt || typeof window.mqtt.connect !== 'function') {
+        statusEl.style.color = '#F87171';
+        statusEl.textContent = '❌ Lỗi: Thư viện mqtt.min.js chưa tải hoặc không tương thích trình duyệt TV.';
+        detailEl.textContent = 'Chi tiết: window.mqtt = ' + String(typeof window.mqtt);
+        return;
+      }
+
+      var BROKERS = [
+        { name: 'EMQX (broker.emqx.io:8084)', url: 'wss://broker.emqx.io:8084/mqtt' },
+        { name: 'HiveMQ (broker.hivemq.com:8884)', url: 'wss://broker.hivemq.com:8884/mqtt' }
+      ];
+
+      var activeClient = null;
+      var switchTimer = null;
+      var errorsLog = [];
+      var rtcPc = null;
+      var rtcChannel = null;
+      var pendingRemoteIce = [];
+
+      function closeTvRtc() {
+        pendingRemoteIce = [];
+        if (rtcChannel) { try { rtcChannel.close(); } catch (e) {} rtcChannel = null; }
+        if (rtcPc) { try { rtcPc.close(); } catch (e) {} rtcPc = null; }
+      }
+
+      function applyAnnotsSync(sid, list, lastStrokeId) {
+        tvDocState.annotsBySid[sid] = list || [];
+        clearCommittedLiveStrokes(lastStrokeId || highestStrokeId);
+        if (tvDocState.view && tvDocState.pdfOpened && tvDiag.pageReadyKey === (tvDocState.view.pdfHash + ':' + tvDocState.view.pno)) {
+          redrawCommittedInkLayerOnly();
+        } else {
+          redrawAllLiveStrokes();
+        }
+      }
+
+      var videoStage = document.getElementById('tv-video-stage');
+      var videoOverlay = document.getElementById('tv-video-play-overlay');
+      var videoOverlayMsg = document.getElementById('tv-video-overlay-msg');
+      var videoOverlayErr = document.getElementById('tv-video-overlay-err');
+      var videoPlayBtn = document.getElementById('tv-video-play-btn');
+      var vidPc = null;
+      var pendingVidIce = [];
+      var vidStatsTimer = null;
+      var vidTrackWatchdog = null;
+
+      function closeTvVideo() {
+        if (vidStatsTimer) { clearInterval(vidStatsTimer); vidStatsTimer = null; }
+        if (vidTrackWatchdog) { clearTimeout(vidTrackWatchdog); vidTrackWatchdog = null; }
+        pendingVidIce = [];
+        if (vidPc) { try { vidPc.close(); } catch (e) {} vidPc = null; }
+        if (videoStage) {
+          try { videoStage.pause(); } catch (e) {}
+          videoStage.srcObject = null;
+          videoStage.classList.add('hidden');
+        }
+        if (videoOverlay) videoOverlay.classList.add('hidden');
+      }
+
+      function setVideoError(errClass, errMsg, mqttClient) {
+        tvDiag.lastError = '[' + errClass + '] ' + errMsg;
+        tvDiag.imageMode = 'Video: ' + errClass;
+        if (videoOverlay) videoOverlay.classList.remove('hidden');
+        if (videoOverlayMsg) videoOverlayMsg.textContent = '⚠️ ' + errClass;
+        if (videoOverlayErr) videoOverlayErr.textContent = errMsg;
+        refreshTvDiagOverlay();
+        if (mqttClient && mqttClient.connected) {
+          try {
+            mqttClient.publish(topicAck, JSON.stringify({
+              type: 'vid_stats',
+              roomCode: roomCode,
+              errorClass: errClass,
+              errorMsg: errMsg
+            }));
+          } catch (e) {}
+        }
+      }
+
+      function attemptPlayVideo(mqttClient) {
+        if (!videoStage) return;
+        try {
+          var p = videoStage.play();
+          if (p && typeof p.then === 'function') {
+            p.then(function () {
+              if (videoOverlay) videoOverlay.classList.add('hidden');
+            }).catch(function (err) {
+              var msg = (err && err.name === 'NotAllowedError')
+                ? 'Trình duyệt TV yêu cầu bấm nút "Bắt đầu phát Video 16:9" bên dưới để phát.'
+                : ('Lỗi phát video: ' + (err && err.message ? err.message : String(err)));
+              setVideoError('Lỗi phát video', msg, mqttClient);
+            });
+          } else if (videoOverlay) {
+            videoOverlay.classList.add('hidden');
+          }
+        } catch (err) {
+          setVideoError('Lỗi phát video', err && err.message ? err.message : String(err), mqttClient);
+        }
+      }
+
+      if (videoPlayBtn) {
+        videoPlayBtn.addEventListener('click', function () {
+          attemptPlayVideo(activeClient);
+        });
+      }
+
+      function handleVideoOffer(msg, mqttClient) {
+        closeTvVideo();
+        if (typeof RTCPeerConnection !== 'function' || !videoStage) {
+          setVideoError('Không hỗ trợ', 'Trình duyệt TV không hỗ trợ RTCPeerConnection hoặc <video>.', mqttClient);
+          return;
+        }
+        if (!msg || !msg.sdp) return;
+
+        waiting.classList.add('hidden');
+        viewport.classList.remove('hidden');
+        if (testBanner) testBanner.classList.add('hidden');
+        videoStage.classList.remove('hidden');
+        if (videoOverlay) videoOverlay.classList.remove('hidden');
+        if (videoOverlayMsg) videoOverlayMsg.textContent = '📺 Đã nhận kết nối Video 16:9 — Bấm "Bắt đầu phát Video 16:9" nếu chưa tự phát';
+        if (videoOverlayErr) videoOverlayErr.textContent = '';
+
+        try {
+          var pc = new RTCPeerConnection({
+            iceServers: [
+              { urls: 'stun:stun.l.google.com:19302' },
+              { urls: 'stun:stun1.l.google.com:19302' },
+              { urls: 'stun:stun.cloudflare.com:3478' }
+            ]
+          });
+          vidPc = pc;
+
+          pc.oniceconnectionstatechange = function () {
+            if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') {
+              setVideoError('Lỗi kết nối', 'WebRTC Video ICE ' + pc.iceConnectionState, mqttClient);
+            }
+          };
+
+          vidTrackWatchdog = setTimeout(function () {
+            if (!videoStage.srcObject) {
+              setVideoError('Lỗi kết nối', 'Không nhận được video track (ontrack timeout 10s).', mqttClient);
+            }
+          }, 10000);
+
+          pc.ontrack = function (ev) {
+            if (vidTrackWatchdog) { clearTimeout(vidTrackWatchdog); vidTrackWatchdog = null; }
+            var stream = (ev.streams && ev.streams[0]) ? ev.streams[0] : new MediaStream([ev.track]);
+            videoStage.srcObject = stream;
+            tvDiag.imageMode = 'Video trực tiếp 16:9';
+            tvDiag.fallbackReason = '';
+            refreshTvDiagOverlay();
+            attemptPlayVideo(mqttClient);
+          };
+
+          pc.onicecandidate = function (ev) {
+            if (ev.candidate && mqttClient && mqttClient.connected) {
+              try {
+                mqttClient.publish(topicAck, JSON.stringify({
+                  type: 'vid_ice',
+                  roomCode: roomCode,
+                  candidate: ev.candidate
+                }));
+              } catch (e) {}
+            }
+          };
+
+          // Ưu tiên H.264 nếu TV hỗ trợ
+          try {
+            if (typeof RTCRtpReceiver !== 'undefined' && RTCRtpReceiver.getCapabilities) {
+              var caps = RTCRtpReceiver.getCapabilities('video');
+              if (caps && caps.codecs && typeof pc.getTransceivers === 'function') {
+                var h264 = caps.codecs.filter(function (c) { return c.mimeType && c.mimeType.toLowerCase() === 'video/h264'; });
+                var others = caps.codecs.filter(function (c) { return !c.mimeType || c.mimeType.toLowerCase() !== 'video/h264'; });
+                var ordered = h264.concat(others);
+                pc._orderedVideoCodecs = ordered;
+              }
+            }
+          } catch (e) {}
+
+          pc.setRemoteDescription(new RTCSessionDescription(msg.sdp)).then(function () {
+            while (pendingVidIce.length > 0) {
+              var c = pendingVidIce.shift();
+              pc.addIceCandidate(new RTCIceCandidate(c)).catch(function () {});
+            }
+            if (pc._orderedVideoCodecs && typeof pc.getTransceivers === 'function') {
+              pc.getTransceivers().forEach(function (t) {
+                if (t.receiver && t.receiver.track && t.receiver.track.kind === 'video' && typeof t.setCodecPreferences === 'function') {
+                  try { t.setCodecPreferences(pc._orderedVideoCodecs); } catch (e) {}
+                }
+              });
+            }
+            return pc.createAnswer();
+          }).then(function (ans) {
+            return pc.setLocalDescription(ans).then(function () { return ans; });
+          }).then(function (ans) {
+            if (mqttClient && mqttClient.connected) {
+              mqttClient.publish(topicAck, JSON.stringify({
+                type: 'vid_answer',
+                roomCode: roomCode,
+                sdp: ans
+              }));
+            }
+          }).catch(function (err) {
+            setVideoError('Lỗi kết nối', 'Thương lượng Video SDP thất bại: ' + (err && err.message ? err.message : String(err)), mqttClient);
+          });
+
+          vidStatsTimer = setInterval(function () {
+            if (!vidPc || vidPc !== pc) return;
+            pc.getStats().then(function (report) {
+              var framesDecoded = 0, framesDropped = 0, fps = 0, codecName = '', rttMs = 0;
+              var byId = {};
+              report.forEach(function (s) { byId[s.id] = s; });
+              report.forEach(function (s) {
+                if (s.type === 'inbound-rtp' && s.kind === 'video') {
+                  framesDecoded = s.framesDecoded || 0;
+                  framesDropped = s.framesDropped || 0;
+                  fps = s.framesPerSecond || 0;
+                  if (s.codecId && byId[s.codecId]) codecName = byId[s.codecId].mimeType || '';
+                }
+                if (s.type === 'candidate-pair' && s.state === 'succeeded' && typeof s.currentRoundTripTime === 'number') {
+                  rttMs = Math.round(s.currentRoundTripTime * 1000 * 10) / 10;
+                }
+              });
+              var pbq = (typeof videoStage.getVideoPlaybackQuality === 'function') ? videoStage.getVideoPlaybackQuality() : null;
+              var totalV = pbq ? pbq.totalVideoFrames : framesDecoded;
+              var droppedV = pbq ? pbq.droppedVideoFrames : framesDropped;
+              if (mqttClient && mqttClient.connected) {
+                mqttClient.publish(topicAck, JSON.stringify({
+                  type: 'vid_stats',
+                  roomCode: roomCode,
+                  videoWidth: videoStage.videoWidth || 0,
+                  videoHeight: videoStage.videoHeight || 0,
+                  framesDecoded: framesDecoded,
+                  framesDropped: framesDropped,
+                  totalVideoFrames: totalV,
+                  droppedVideoFrames: droppedV,
+                  fps: fps,
+                  codec: codecName,
+                  rttMs: rttMs,
+                  paused: Boolean(videoStage.paused),
+                  readyState: videoStage.readyState
+                }));
+              }
+            }).catch(function () {});
+          }, 1500);
+        } catch (err) {
+          setVideoError('Không hỗ trợ', err && err.message ? err.message : String(err), mqttClient);
+        }
+      }
+
+      function handleIncomingCommand(msg, sendAckFn, isRtc) {
+        if (!msg) return;
+        if (msg.ipadVersion) tvDiag.ipadVersion = msg.ipadVersion;
+
+        if (msg.type === 'frame') {
+          var v = tvDocState.view;
+          var pageIsReady = Boolean(v && tvDocState.pdfOpened && msg.pdfHash && tvDocState.pdfHash === msg.pdfHash && tvDiag.pageReadyKey === (msg.pdfHash + ':' + v.pno));
+          if (pageIsReady && !msg.forceFallback) {
+            return;
+          }
+          // Mục 6: Luôn gửi frame_ack cho mỗi ảnh dự phòng xử lý (kể cả qua MQTT)
+          renderDataFrame(msg, sendAckFn);
+        } else if (msg.type === 'stroke_start' || msg.type === 'stroke_pts' || msg.type === 'stroke_end') {
+          handleStrokeDelta(msg, isRtc ? sendAckFn : null, isRtc);
+        } else if (msg.type === 'stroke_commit') {
+          // Mục 3: Thay thế đúng nét tạm bằng hình học hoàn chỉnh từ iPad theo tọa độ trang
+          var sidPage = msg.sid;
+          if (!tvDocState.annotsBySid[sidPage]) tvDocState.annotsBySid[sidPage] = [];
+          if (msg.obj) {
+            var arr = tvDocState.annotsBySid[sidPage];
+            var foundIdx = -1;
+            for (var ai = 0; ai < arr.length; ai++) {
+              if (arr[ai] && arr[ai]._tvStrokeId === msg.strokeId) { foundIdx = ai; break; }
+            }
+            var objCopy = Object.assign({}, msg.obj, { _tvStrokeId: msg.strokeId });
+            if (foundIdx >= 0) arr[foundIdx] = objCopy;
+            else arr.push(objCopy);
+          }
+          if (msg.strokeId && liveStrokes[msg.strokeId]) {
+            delete liveStrokes[msg.strokeId];
+          }
+          if (tvDocState.view && tvDocState.pdfOpened && tvDiag.pageReadyKey === (tvDocState.view.pdfHash + ':' + tvDocState.view.pno)) {
+            redrawCommittedInkLayerOnly();
+          } else {
+            redrawAllLiveStrokes();
+          }
+        } else if (msg.type === 'view_sync') {
+          tvDocState.view = msg;
+          scheduleNativeViewRender(sendAckFn);
+        } else if (msg.type === 'annots_sync') {
+          applyAnnotsSync(msg.sid, msg.annots, msg.lastStrokeId);
+        } else if (msg.type === 'annots_chunk_start') {
+          annotsChunkAcc[msg.chunkId] = { sid: msg.sid, lastStrokeId: msg.lastStrokeId, total: msg.total, parts: new Array(msg.total), count: 0 };
+        } else if (msg.type === 'annots_chunk' && annotsChunkAcc[msg.chunkId]) {
+          var acc = annotsChunkAcc[msg.chunkId];
+          if (!acc.parts[msg.idx]) { acc.parts[msg.idx] = msg.data; acc.count++; }
+          if (acc.count >= acc.total) {
+            try {
+              var parsed = JSON.parse(acc.parts.join(''));
+              delete annotsChunkAcc[msg.chunkId];
+              applyAnnotsSync(acc.sid, parsed, acc.lastStrokeId);
+            } catch (e) {
+              tvDiag.lastError = 'annots_chunk parse: ' + (e && e.message ? e.message : String(e));
+              refreshTvDiagOverlay();
+            }
+          }
+        } else if (msg.type === 'pdf_load_url' && msg.url && window.pdfjsLib) {
+          if (tvDocState.pdfOpened && tvDocState.pdfHash === msg.pdfHash) {
+            sendAckFn({ type: 'pdf_opened', roomCode: roomCode, pdfHash: msg.pdfHash });
+            scheduleNativeViewRender(sendAckFn);
+            return;
+          }
+          fetch(msg.url).then(function (r) { return r.arrayBuffer(); }).then(function (buf) {
+            return pdfjsLib.getDocument({ data: new Uint8Array(buf) }).promise;
+          }).then(function (doc) {
+            clearTvPageCache();
+            tvDocState.pdfDoc = doc;
+            tvDocState.pdfHash = msg.pdfHash;
+            tvDocState.pdfOpened = true;
+            tvDiag.pdfOpened = true;
+            sendAckFn({ type: 'pdf_opened', roomCode: roomCode, pdfHash: msg.pdfHash });
+            scheduleNativeViewRender(sendAckFn);
+          }).catch(function (err) {
+            tvDiag.lastError = 'pdf_load_url: ' + (err && err.message ? err.message : String(err));
+            refreshTvDiagOverlay();
+          });
+        } else if (msg.type === 'pdf_start') {
+          if (tvDocState.pdfOpened && tvDocState.pdfHash === msg.pdfHash) {
+            sendAckFn({ type: 'pdf_opened', roomCode: roomCode, pdfHash: msg.pdfHash });
+            scheduleNativeViewRender(sendAckFn);
+            return;
+          }
+          clearTvPageCache();
+          tvDocState.pdfHash = msg.pdfHash;
+          tvDocState.pdfOpened = false;
+          tvDiag.pdfOpened = false;
+          tvDocState.chunks = new Array(msg.totalChunks || 0);
+          tvDocState.totalChunks = msg.totalChunks || 0;
+          tvDocState.receivedChunks = 0;
+        } else if (msg.type === 'pdf_chunk' && msg.pdfHash === tvDocState.pdfHash) {
+          if (!tvDocState.chunks[msg.idx]) {
+            tvDocState.chunks[msg.idx] = msg.data;
+            tvDocState.receivedChunks++;
+          }
+          if (tvDocState.totalChunks > 0 && tvDocState.receivedChunks >= tvDocState.totalChunks && window.pdfjsLib) {
+            try {
+              var binParts = [];
+              var totalLen = 0;
+              for (var ci = 0; ci < tvDocState.chunks.length; ci++) {
+                var rawStr = atob(tvDocState.chunks[ci] || '');
+                var arr = new Uint8Array(rawStr.length);
+                for (var bi = 0; bi < rawStr.length; bi++) arr[bi] = rawStr.charCodeAt(bi);
+                binParts.push(arr);
+                totalLen += arr.length;
+              }
+              var fullBytes = new Uint8Array(totalLen);
+              var off = 0;
+              for (var pi = 0; pi < binParts.length; pi++) {
+                fullBytes.set(binParts[pi], off);
+                off += binParts[pi].length;
+              }
+              tvDocState.chunks = [];
+              pdfjsLib.getDocument({ data: fullBytes }).promise.then(function (doc) {
+                tvDocState.pdfDoc = doc;
+                tvDocState.pdfOpened = true;
+                tvDiag.pdfOpened = true;
+                sendAckFn({ type: 'pdf_opened', roomCode: roomCode, pdfHash: msg.pdfHash });
+                scheduleNativeViewRender(sendAckFn);
+              }).catch(function (err) {
+                tvDiag.lastError = 'pdf_chunk decode: ' + (err && err.message ? err.message : String(err));
+                refreshTvDiagOverlay();
+              });
+            } catch (e) {
+              tvDiag.lastError = 'pdf_chunk atob: ' + (e && e.message ? e.message : String(e));
+              refreshTvDiagOverlay();
+            }
+          }
+        } else if (msg.type === 'stop') {
+          closeTvVideo();
+          closeTvRtc();
+          waiting.classList.remove('hidden');
+          viewport.classList.add('hidden');
+          liveStrokes = {};
+          inkCtx.clearRect(0, 0, inkCanvas.width, inkCanvas.height);
+          committedInkCtx.clearRect(0, 0, committedInkCanvas.width, committedInkCanvas.height);
+          if (testBanner) testBanner.classList.add('hidden');
+          statusEl.style.color = '#34D399';
+          statusEl.textContent = '🔌 iPad đã ngắt trình chiếu. Mã phòng vẫn là ' + roomCode + '.';
+        }
+      }
+
+      function flushPendingTvIce(pc) {
+        while (pendingRemoteIce.length > 0 && pc.remoteDescription) {
+          var cand = pendingRemoteIce.shift();
+          pc.addIceCandidate(new RTCIceCandidate(cand)).catch(function (err) {
+            tvDiag.lastError = 'TV addIceCandidate: ' + (err && err.message ? err.message : String(err));
+            refreshTvDiagOverlay();
+          });
+        }
+      }
+
+      function handleRtcOffer(msg, mqttClient) {
+        closeTvRtc();
+        if (typeof RTCPeerConnection !== 'function' || !msg || !msg.sdp) {
+          tvDiag.lastError = 'TV không hỗ trợ RTCPeerConnection';
+          return;
+        }
+        try {
+          var pc = new RTCPeerConnection({
+            iceServers: [
+              { urls: 'stun:stun.l.google.com:19302' },
+              { urls: 'stun:stun1.l.google.com:19302' },
+              { urls: 'stun:stun.cloudflare.com:3478' }
+            ]
+          });
+          rtcPc = pc;
+          pc.oniceconnectionstatechange = function () {
+            if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') {
+              tvDiag.lastError = 'TV ICE state: ' + pc.iceConnectionState;
+              refreshTvDiagOverlay();
+            }
+          };
+          pc.ondatachannel = function (ev) {
+            var dc = ev.channel;
+            if (dc.label === 'nkpdf-tv-ink' || dc.label === 'nkpdf-tv') {
+              rtcChannel = dc;
+            }
+            dc.onerror = function (err) {
+              tvDiag.lastError = 'TV DC ' + dc.label + ' error: ' + (err && err.message ? err.message : 'DataChannelError');
+              refreshTvDiagOverlay();
+            };
+            dc.onmessage = function (mev) {
+              try {
+                var dmsg = JSON.parse(mev.data);
+                handleIncomingCommand(dmsg, function (ackObj) {
+                  var replyDc = rtcChannel && rtcChannel.readyState === 'open' ? rtcChannel : dc;
+                  if (replyDc && replyDc.readyState === 'open') {
+                    try { replyDc.send(JSON.stringify(ackObj)); } catch (e) {}
+                  }
+                }, true);
+              } catch (e) {
+                tvDiag.lastError = 'TV DC parse: ' + (e && e.message ? e.message : String(e));
+              }
+            };
+          };
+          pc.onicecandidate = function (ev) {
+            if (ev.candidate && mqttClient && mqttClient.connected) {
+              try {
+                mqttClient.publish(topicAck, JSON.stringify({
+                  type: 'rtc_ice',
+                  roomCode: roomCode,
+                  candidate: ev.candidate
+                }));
+              } catch (e) {}
+            }
+          };
+          pc.setRemoteDescription(new RTCSessionDescription(msg.sdp)).then(function () {
+            flushPendingTvIce(pc);
+            return pc.createAnswer();
+          }).then(function (ans) {
+            return pc.setLocalDescription(ans).then(function () { return ans; });
+          }).then(function (ans) {
+            if (mqttClient && mqttClient.connected) {
+              mqttClient.publish(topicAck, JSON.stringify({
+                type: 'rtc_answer',
+                roomCode: roomCode,
+                sdp: ans
+              }));
+            }
+          }).catch(function (err) {
+            tvDiag.lastError = 'TV handleRtcOffer: ' + (err && err.message ? err.message : String(err));
+            refreshTvDiagOverlay();
+          });
+        } catch (e) {
+          tvDiag.lastError = 'TV RTCPeerConnection init: ' + (e && e.message ? e.message : String(e));
+          closeTvRtc();
+        }
+      }
+
+      function stopCurrentClient() {
+        if (switchTimer) {
+          clearTimeout(switchTimer);
+          switchTimer = null;
+        }
+        if (activeClient) {
+          var old = activeClient;
+          activeClient = null;
+          try { old.end(true); } catch (e) {}
+        }
+      }
+
+      function tryBroker(idx) {
+        stopCurrentClient();
+
+        if (idx >= BROKERS.length) {
+          statusEl.style.color = '#F87171';
+          statusEl.textContent = '⚠️ Không kết nối được cả 2 Broker MQTT.';
+          detailEl.textContent = 'Chi tiết lỗi: ' + (errorsLog.join(' | ') || 'Timeout') + ' — Đang tự thử lại sau 4 giây...';
+          setTimeout(function () {
+            errorsLog = [];
+            tryBroker(0);
+          }, 4000);
+          return;
+        }
+
+        var b = BROKERS[idx];
+        var clientId = 'nkpdf_tv_' + roomCode + '_' + Math.random().toString(16).slice(2, 7);
+        statusEl.style.color = '#FDE047';
+        statusEl.textContent = '⏳ Đang kết nối Broker [' + (idx + 1) + '/' + BROKERS.length + ']: ' + b.name + '...';
+        detailEl.textContent = 'URL: ' + b.url + ' | Thư viện: mqtt ' + (window.mqtt.version || 'loaded');
+
+        var connected = false;
+        var switched = false;
+
+        function failAndNext(reason) {
+          if (switched || connected) return;
+          switched = true;
+          var errMsg = b.name + ' -> ' + reason;
+          errorsLog.push(errMsg);
+          detailEl.textContent = '⚠️ Lỗi ' + errMsg + '. Đang chuyển sang Broker tiếp theo...';
+          stopCurrentClient();
+          setTimeout(function () {
+            tryBroker(idx + 1);
+          }, 300);
+        }
+
+        // Timeout độc lập 7.5 giây cho mỗi Broker
+        switchTimer = setTimeout(function () {
+          failAndNext('Quá thời gian chờ (Timeout 7.5s)');
+        }, 7500);
+
+        var client = window.mqtt.connect(b.url, {
+          clientId: clientId,
+          connectTimeout: 6800,
+          keepalive: 25
+        });
+        activeClient = client;
+
+        client.on('connect', function () {
+          if (switched) return;
+          connected = true;
+          if (switchTimer) { clearTimeout(switchTimer); switchTimer = null; }
+
+          statusEl.style.color = '#38BDF8';
+          statusEl.textContent = '⏳ Đã nối ' + b.name + ', đang đăng ký kênh nhận lệnh...';
+
+          client.subscribe(topicCmd, function (subErr) {
+            if (subErr) {
+              connected = false;
+              failAndNext('Lỗi subscribe: ' + (subErr.message || subErr));
+              return;
+            }
+            statusEl.style.color = '#34D399';
+            statusEl.textContent = '✅ SẴN SÀNG KẾT NỐI! Nhập mã ' + roomCode + ' trên iPad.';
+            detailEl.textContent = '🟢 Broker: ' + b.name + ' | Kênh: ' + topicCmd + ' (Đã Subscribe thành công)';
+            if (hasConnectedOnce) {
+              // Tự khôi phục bằng snapshot khi mất kết nối rồi nối lại
+              client.publish(topicAck, JSON.stringify({
+                type: 'tv_need_snapshot',
+                roomCode: roomCode,
+                ts: Date.now()
+              }));
+            }
+            hasConnectedOnce = true;
+          });
+        });
+
+        client.on('message', function (_t, payload) {
+          try {
+            var raw = payload ? payload.toString() : '';
+            var msg = JSON.parse(raw);
+            if (!msg) return;
+            var sendAck = function (obj) {
+              try { client.publish(topicAck, JSON.stringify(obj), { qos: 0 }); } catch (e) {}
+            };
+
+            if (msg.type === 'test') {
+              showTestSuccessOnTv(b.name, roomCode);
+              statusEl.style.color = '#FACC15';
+              statusEl.textContent = '🌟 NKPDF — KẾT NỐI THÀNH CÔNG (Đã nhận TEST từ iPad)';
+              detailEl.textContent = '🟢 Đã gửi gói ACK xác nhận về iPad qua ' + b.name;
+              sendAck({
+                type: 'ack',
+                ackFor: 'test',
+                roomCode: roomCode,
+                brokerName: b.name,
+                brokerUrl: b.url,
+                capabilities: getTvCapabilities(),
+                ts: Date.now()
+              });
+            } else if (msg.type === 'ping') {
+              statusEl.style.color = '#34D399';
+              statusEl.textContent = '🔗 Đã ghép nối 2 chiều với iPad! Đang nhận hình ảnh 16:9...';
+              detailEl.textContent = '🟢 Đã gửi ACK ghép nối về iPad qua ' + b.name;
+              sendAck({
+                type: 'ack',
+                ackFor: 'ping',
+                roomCode: roomCode,
+                brokerName: b.name,
+                brokerUrl: b.url,
+                capabilities: getTvCapabilities(),
+                ts: Date.now()
+              });
+            } else if (msg.type === 'vid_offer') {
+              handleVideoOffer(msg, client);
+            } else if (msg.type === 'vid_ice' && msg.candidate) {
+              if (vidPc && vidPc.remoteDescription) {
+                vidPc.addIceCandidate(new RTCIceCandidate(msg.candidate)).catch(function () {});
+              } else {
+                pendingVidIce.push(msg.candidate);
+              }
+            } else if (msg.type === 'vid_stop') {
+              closeTvVideo();
+              tvDiag.imageMode = 'Chưa chiếu';
+              refreshTvDiagOverlay();
+            } else if (msg.type === 'rtc_offer') {
+              handleRtcOffer(msg, client);
+            } else if (msg.type === 'rtc_ice' && msg.candidate && rtcPc) {
+              if (rtcPc.remoteDescription) {
+                rtcPc.addIceCandidate(new RTCIceCandidate(msg.candidate)).catch(function (err) {
+                  tvDiag.lastError = 'TV addIceCandidate: ' + (err && err.message ? err.message : String(err));
+                  refreshTvDiagOverlay();
+                });
+              } else {
+                pendingRemoteIce.push(msg.candidate);
+              }
+            } else {
+              handleIncomingCommand(msg, sendAck, false);
+            }
+          } catch (e) {}
+        });
+
+        client.on('timeout', function (err) {
+          failAndNext('Timeout (' + (err && err.message ? err.message : 'quá hạn') + ')');
+        });
+
+        client.on('error', function (err) {
+          var msg = (err && err.message) ? err.message : 'Lỗi WebSocket/MQTT';
+          if (!connected) {
+            failAndNext(msg);
+          } else {
+            detailEl.textContent = '⚠️ Cảnh báo trên ' + b.name + ': ' + msg;
+          }
+        });
+
+        client.on('offline', function () {
+          if (!connected) {
+            failAndNext('Mất kết nối (offline)');
+          } else {
+            statusEl.style.color = '#FDE047';
+            statusEl.textContent = '⚠️ Mất kết nối tới ' + b.name + ', đang kết nối lại...';
+            connected = false;
+            tryBroker(0);
+          }
+        });
+
+        client.on('close', function () {
+          if (!connected && !switched) {
+            failAndNext('Kết nối bị đóng (close)');
+          } else if (connected && !switched) {
+            connected = false;
+            statusEl.style.color = '#FDE047';
+            statusEl.textContent = '⚠️ Kết nối ' + b.name + ' đã đóng, đang kết nối lại...';
+            setTimeout(function () { tryBroker(0); }, 1000);
+          }
+        });
+      }
+
+      tryBroker(0);
+    })();
+  </script>
+</body>
+</html>

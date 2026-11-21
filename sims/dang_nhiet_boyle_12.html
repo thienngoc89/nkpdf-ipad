@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mô phỏng Định luật Boyle — Đẳng nhiệt Khí lí tưởng (Vật lí 12)</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: "Segoe UI", system-ui, sans-serif; }
+  body { background: #0B192C; color: #F8FAFC; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+  .header { background: #1E3E62; padding: 8px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #38BDF8; }
+  .header h2 { font-size: 15px; color: #FEF08A; }
+  .main { flex: 1; display: flex; gap: 10px; padding: 10px; overflow: hidden; }
+  .canvas-box { flex: 1; background: #0F172A; border: 1px solid #334155; border-radius: 10px; }
+  canvas { width: 100%; height: 100%; display: block; }
+  .controls { width: 290px; background: #1E293B; border: 1px solid #475569; border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+  .ctrl-row { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; }
+  .ctrl-row label { display: flex; justify-content: space-between; font-weight: 600; color: #BAE6FD; }
+  input[type=range] { width: 100%; accent-color: #F59E0B; }
+  .readout { background: #0F172A; border: 1px solid #334155; border-radius: 8px; padding: 10px; font-size: 12.5px; line-height: 1.75; }
+  .readout b { color: #FEF08A; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <h2>🌡️ ĐỊNH LUẬT BOYLE — QUÁ TRÌNH ĐẲNG NHIỆT KHÍ LÍ TƯỞNG (VẬT LÍ 12) — LỚP LÝ THẦY NGỌC</h2>
+    <span style="font-size:12px;color:#BAE6FD">p₁V₁ = p₂V₂ = const</span>
+  </div>
+  <div class="main">
+    <div class="canvas-box">
+      <canvas id="pvCanvas"></canvas>
+    </div>
+    <div class="controls">
+      <div class="ctrl-row">
+        <label><span>Thể tích xilanh V (Lít):</span><span id="lblV">4.0 L</span></label>
+        <input type="range" id="slV" min="1.2" max="8.0" step="0.1" value="4.0" />
+      </div>
+      <div class="ctrl-row">
+        <label><span>Nhiệt độ tuyệt đối T (K):</span><span id="lblT">300 K</span></label>
+        <input type="range" id="slT" min="200" max="600" step="50" value="300" />
+      </div>
+      <div class="readout" id="pvInfo"></div>
+    </div>
+  </div>
+<script>
+  const canvas = document.getElementById('pvCanvas');
+  const ctx = canvas.getContext('2d');
+  const particles = Array.from({ length: 38 }, () => ({
+    rx: Math.random(), ry: Math.random(),
+    vx: (Math.random() - 0.5) * 2.5, vy: (Math.random() - 0.5) * 2.5
+  }));
+
+  function resize() {
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = canvas.clientWidth * dpr;
+    canvas.height = canvas.clientHeight * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  function loop() {
+    const V = parseFloat(document.getElementById('slV').value);
+    const T = parseFloat(document.getElementById('slT').value);
+    const kConst = (T / 300) * 8.0; // p * V = kConst (atm * L)
+    const p = kConst / V;
+
+    document.getElementById('lblV').textContent = V.toFixed(1) + ' Lít';
+    document.getElementById('lblT').textContent = T.toFixed(0) + ' K (' + (T - 273).toFixed(0) + ' °C)';
+    document.getElementById('pvInfo').innerHTML =
+      `Nhiệt độ: <b>T = ${T} K</b><br>` +
+      `Thể tích khí: <b>V = ${V.toFixed(2)} Lít</b><br>` +
+      `Áp suất khí: <b>p = ${p.toFixed(2)} atm</b><br>` +
+      `Tích số: <b>p·V = ${(p * V).toFixed(2)} atm·L (Hằng số)</b><br>` +
+      `<span style="color:#34D399">💡 Kéo thanh Thể tích V để nén/giãn pít-tông và quan sát điểm trạng thái M chạy trên đường Hyperbol đẳng nhiệt!</span>`;
+
+    const W = canvas.clientWidth, H = canvas.clientHeight;
+    ctx.clearRect(0, 0, W, H);
+
+    // 1. Vẽ Xilanh & Pít-tông bên trái
+    const cylX = 50, cylY = 65, cylW = 150, cylMaxH = H - 130;
+    const gasH = (V / 8.5) * cylMaxH;
+    const pistonY = cylY + cylMaxH - gasH;
+
+    // Thành xilanh
+    ctx.fillStyle = 'rgba(56, 189, 248, 0.08)';
+    ctx.fillRect(cylX, pistonY, cylW, gasH);
+    ctx.strokeStyle = '#94A3B8'; ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(cylX, cylY); ctx.lineTo(cylX, cylY + cylMaxH);
+    ctx.lineTo(cylX + cylW, cylY + cylMaxH); ctx.lineTo(cylX + cylW, cylY);
+    ctx.stroke();
+
+    // Pít-tông
+    ctx.fillStyle = '#F59E0B';
+    ctx.fillRect(cylX + 3, pistonY - 14, cylW - 6, 14);
+    ctx.fillRect(cylX + cylW * 0.5 - 8, cylY - 20, 16, pistonY - 14 - (cylY - 20));
+
+    // Các phân tử khí chuyển động nhiệt
+    const speedMult = Math.sqrt(T / 300) * 1.4;
+    ctx.fillStyle = '#38BDF8';
+    particles.forEach((pt) => {
+      pt.rx += (pt.vx * speedMult) / cylW;
+      pt.ry += (pt.vy * speedMult) / Math.max(25, gasH);
+      if (pt.rx < 0.05 || pt.rx > 0.95) pt.vx *= -1;
+      if (pt.ry < 0.06 || pt.ry > 0.94) pt.vy *= -1;
+      pt.rx = Math.max(0.05, Math.min(0.95, pt.rx));
+      pt.ry = Math.max(0.06, Math.min(0.94, pt.ry));
+      ctx.beginPath();
+      ctx.arc(cylX + pt.rx * cylW, pistonY + pt.ry * gasH, 3.8, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // 2. Vẽ đồ thị Đẳng nhiệt (p - V) bên phải
+    const ox = 270, oy = H - 65, axW = W - 320, axH = H - 125;
+    ctx.strokeStyle = '#E2E8F0'; ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(ox, oy - axH); ctx.lineTo(ox, oy); ctx.lineTo(ox + axW, oy);
+    ctx.stroke();
+    ctx.fillStyle = '#FEF08A'; ctx.font = 'bold 13px sans-serif';
+    ctx.fillText('p (atm)', ox - 15, oy - axH - 10);
+    ctx.fillText('V (Lít)', ox + axW - 25, oy + 24);
+    ctx.fillText('O', ox - 16, oy + 16);
+
+    // Vẽ đường đẳng nhiệt tham chiếu T = 300K (nét đứt) nếu T != 300
+    function plotIsotherm(tempK, color, dashed) {
+      const kc = (tempK / 300) * 8.0;
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = dashed ? 1.6 : 3.0;
+      if (dashed) ctx.setLineDash([5, 4]);
+      ctx.beginPath();
+      let started = false;
+      for (let vVal = 1.0; vVal <= 8.5; vVal += 0.1) {
+        const pVal = kc / vVal;
+        if (pVal > 8.5) continue;
+        const px = ox + (vVal / 8.8) * axW;
+        const py = oy - (pVal / 8.8) * axH;
+        if (!started) { ctx.moveTo(px, py); started = true; }
+        else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    if (T !== 300) plotIsotherm(300, 'rgba(148, 163, 184, 0.45)', true);
+    plotIsotherm(T, '#34D399', false);
+
+    // Điểm trạng thái hiện tại M(V, p)
+    const mx = ox + (V / 8.8) * axW;
+    const my = oy - (Math.min(8.6, p) / 8.8) * axH;
+    ctx.strokeStyle = '#F59E0B'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(mx, oy); ctx.lineTo(mx, my); ctx.lineTo(ox, my);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = '#FB7185'; ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(mx, my, 6.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#FEF08A'; ctx.font = 'bold 12.5px sans-serif';
+    ctx.fillText(`M(${V.toFixed(1)}L; ${p.toFixed(2)}atm)`, mx + 10, my - 8);
+
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+</script>
+</body>
+</html>
