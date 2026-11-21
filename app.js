@@ -409,6 +409,7 @@
 
     ctx.restore();
     redrawActiveLayer(sid);
+    if (typeof scheduleTvFrameSync === 'function') scheduleTvFrameSync('surface');
   }
 
   function drawGrid(gridCanvas, cssW, cssH, dpr, isBoard) {
@@ -939,6 +940,7 @@
           holdAnchor: { x: pos.x, y: pos.y }
         };
         redrawActiveLayer(sid);
+        if (typeof tvEmitStrokeStart === 'function') tvEmitStrokeStart(sid, surf.previewObj, pos);
       } else {
         const rSnap = snapPointToRulerEdge(inkCanvas, pos, sid, null);
         if (rSnap) pos = { x: rSnap.x, y: rSnap.y };
@@ -1127,6 +1129,7 @@
             if (!isHl && !state.dashed && !act.scribbleState && fn >= 3) {
               drawIncrementalSegment(fPts[fn - 3], fPts[fn - 2], fPts[fn - 1], penCol, penW, false, false);
             }
+            if (typeof tvQueueStrokePoint === 'function') tvQueueStrokePoint(sid, p);
           }
         }
 
@@ -1374,6 +1377,7 @@
             // KHÔNG tự động chọn hình vừa vẽ/nắn khi đang ở chế độ Bút viết để Thầy viết tiếp biểu thức dưới dấu căn hoặc cạnh đường thẳng ngay lập tức!
           }
           surf.previewObj = null;
+          if (typeof tvEmitStrokeEnd === 'function') tvEmitStrokeEnd(sid);
           redrawSurface(sid);
         }
       } else {
@@ -2266,6 +2270,10 @@
       renderChain = renderChain.then(() => {
         if (myEpoch !== renderEpoch) return;
         return mountPdfPageCanvases(pno);
+      }).then(() => {
+        if (myEpoch === renderEpoch && typeof scheduleTvFrameSync === 'function') {
+          scheduleTvFrameSync('page', true);
+        }
       }).catch(() => {});
     });
   }
@@ -2276,6 +2284,7 @@
     renderEpoch++;
     if (scrollIdleTimer) clearTimeout(scrollIdleTimer);
     scrollIdleTimer = setTimeout(syncVisiblePdfPages, 150);
+    if (typeof scheduleTvScrollSync === 'function') scheduleTvScrollSync();
   }, { passive: true });
 
   async function loadPdfBytes(uint8, fileName) {
@@ -3842,38 +3851,281 @@
   }, { passive: true });
 
   // ============================================================================
-  // CHẾ ĐỘ TRÌNH CHIẾU TV 16:9 📺 (IPAD VẪN GIỮ NGUYÊN CÔNG CỤ! TV HIỆN FULL 16:9 0% VIỀN ĐEN)
+  // CHẾ ĐỘ TRÌNH CHIẾU TV 16:9 📺 (P2: EVENT-DRIVEN + ASYNC TOBLOB + REALTIME INK DELTA)
   // ============================================================================
   const presentModal = document.getElementById('ModalTrinhChieu');
   const tvChannel = ('BroadcastChannel' in window) ? new BroadcastChannel('nkpdf-tv-16x9') : null;
   let tvStageActive = false;
-  let tvSyncTimer = null;
   let tvPresentMode = 'presenter_crop'; // 'presenter_crop' (tràn ngang 16:9) | 'full_page' (toàn trang)
   let tvMqttClient = null;
   let tvMqttTopic = '';
-  let tvLastFrameHash = '';
+  let tvLastFrameSig = '';
 
-  // Canvas chuẩn 16:9 (1280×720) xuất trực tiếp lên TV: mọi kích cỡ iPad (Mini/Air/Pro) đều xuất đúng 16:9 không vạch đen!
+  // Trạng thái pipeline gửi frame bất đồng bộ & chống tích lũy độ trễ (Backpressure / Latest-Frame-Wins)
+  let tvFrameSeq = 0;
+  let tvFrameEncoding = false;
+  let tvFrameInFlightId = 0;
+  let tvFrameAckWatchdog = null;
+  let tvPendingSync = false;
+  let tvPendingForce = false;
+  let tvRafSyncId = 0;
+  let tvScrollThrottleTimer = null;
+  const tvInFlightMeta = new Map(); // frameId -> { t0Perf, captureMs, encodeMs, publishMs, bytes }
+
+  // Trạng thái truyền delta nét bút Apple Pencil thời gian thực (Realtime Stroke Delta)
+  let tvActiveStrokeId = 0;
+  let tvActiveStrokeSid = null;
+  let tvStrokeBuf = [];
+  let tvStrokeRafId = 0;
+  const tvStrokeSentMeta = new Map(); // strokeKey -> { t0Perf, sampleMs, bytes }
+
+  // Bộ đo hiệu năng P50/P95 & băng thông thực tế (P2 Bước 1)
+  const tvMetrics = {
+    captureMs: [],
+    encodeMs: [],
+    publishMs: [],
+    frameBytes: [],
+    frameRttMs: [],
+    tvDecodeMs: [],
+    tvDrawMs: [],
+    deltaSampleMs: [],
+    deltaBytes: [],
+    deltaRttMs: [],
+    tvStrokeDrawMs: [],
+    bytesLog: [] // { ts, bytes }
+  };
+  const TV_METRIC_WINDOW = 120;
+  function pushTvMetric(arr, val) {
+    if (!Number.isFinite(val) || val < 0) return;
+    arr.push(val);
+    if (arr.length > TV_METRIC_WINDOW) arr.shift();
+  }
+  function logTvBytes(bytes) {
+    const now = performance.now();
+    tvMetrics.bytesLog.push({ ts: now, bytes });
+    const cutoff = now - 5000;
+    while (tvMetrics.bytesLog.length > 0 && tvMetrics.bytesLog[0].ts < cutoff) {
+      tvMetrics.bytesLog.shift();
+    }
+  }
+  function calcPercentile(arr, p) {
+    if (!arr.length) return 0;
+    const sorted = arr.slice().sort((a, b) => a - b);
+    const idx = Math.min(sorted.length - 1, Math.max(0, Math.ceil((p / 100) * sorted.length) - 1));
+    return Math.round(sorted[idx] * 10) / 10;
+  }
+  function getTvMetricsSummary() {
+    const now = performance.now();
+    const cutoff = now - 5000;
+    let totalBytes5s = 0;
+    let firstTs = now;
+    for (let i = 0; i < tvMetrics.bytesLog.length; i++) {
+      if (tvMetrics.bytesLog[i].ts >= cutoff) {
+        totalBytes5s += tvMetrics.bytesLog[i].bytes;
+        if (tvMetrics.bytesLog[i].ts < firstTs) firstTs = tvMetrics.bytesLog[i].ts;
+      }
+    }
+    const spanSec = Math.max(0.5, (now - firstTs) / 1000);
+    return {
+      resolution: `${tv169Canvas.width}x${tv169Canvas.height}`,
+      mime: tvEncodeMime,
+      quality: tvEncodeQuality,
+      samples: {
+        frames: tvMetrics.frameBytes.length,
+        deltas: tvMetrics.deltaBytes.length
+      },
+      frame: {
+        captureMs: { p50: calcPercentile(tvMetrics.captureMs, 50), p95: calcPercentile(tvMetrics.captureMs, 95) },
+        encodeMs: { p50: calcPercentile(tvMetrics.encodeMs, 50), p95: calcPercentile(tvMetrics.encodeMs, 95) },
+        publishMs: { p50: calcPercentile(tvMetrics.publishMs, 50), p95: calcPercentile(tvMetrics.publishMs, 95) },
+        tvDecodeMs: { p50: calcPercentile(tvMetrics.tvDecodeMs, 50), p95: calcPercentile(tvMetrics.tvDecodeMs, 95) },
+        tvDrawMs: { p50: calcPercentile(tvMetrics.tvDrawMs, 50), p95: calcPercentile(tvMetrics.tvDrawMs, 95) },
+        rttMs: { p50: calcPercentile(tvMetrics.frameRttMs, 50), p95: calcPercentile(tvMetrics.frameRttMs, 95) },
+        bytes: { p50: calcPercentile(tvMetrics.frameBytes, 50), p95: calcPercentile(tvMetrics.frameBytes, 95) }
+      },
+      delta: {
+        sampleMs: { p50: calcPercentile(tvMetrics.deltaSampleMs, 50), p95: calcPercentile(tvMetrics.deltaSampleMs, 95) },
+        tvDrawMs: { p50: calcPercentile(tvMetrics.tvStrokeDrawMs, 50), p95: calcPercentile(tvMetrics.tvStrokeDrawMs, 95) },
+        rttMs: { p50: calcPercentile(tvMetrics.deltaRttMs, 50), p95: calcPercentile(tvMetrics.deltaRttMs, 95) },
+        bytes: { p50: calcPercentile(tvMetrics.deltaBytes, 50), p95: calcPercentile(tvMetrics.deltaBytes, 95) }
+      },
+      bandwidthKBps: Math.round((totalBytes5s / 1024 / spanSec) * 10) / 10
+    };
+  }
+  window.__nkpdfTvMetrics = {
+    getSummary: getTvMetricsSummary,
+    raw: tvMetrics
+  };
+
+  // Canvas chuẩn 16:9 xuất lên TV (mọi kích cỡ iPad đều xuất đúng 16:9 không vạch đen!)
   const tv169Canvas = document.createElement('canvas');
   tv169Canvas.width = 1280;
   tv169Canvas.height = 720;
   const tv169Ctx = tv169Canvas.getContext('2d');
+  let tvEncodeMime = 'image/jpeg';
+  let tvEncodeQuality = 0.65;
+
+  function tvPublishPacket(obj) {
+    const raw = JSON.stringify(obj);
+    const bytes = raw.length;
+    logTvBytes(bytes);
+    if (tvChannel) {
+      try { tvChannel.postMessage(obj); } catch (_) {}
+    }
+    const tPub0 = performance.now();
+    if (tvMqttClient && tvMqttClient.connected && tvMqttTopic) {
+      tvMqttClient.publish(tvMqttTopic, raw, { qos: 0 });
+    }
+    return { bytes, publishMs: performance.now() - tPub0 };
+  }
+
+  // Quy đổi tọa độ nét Apple Pencil trên iPad sang tọa độ chuẩn hóa [0..1]x[0..1] của khung 16:9 trên TV
+  function mapSurfacePointToTvNorm(sid, x, y, width) {
+    const W = tv169Canvas.width, H = tv169Canvas.height;
+    if (state.mode === 'board') {
+      if (sid !== 'board' || !surfaces.board || !bxGridCanvas) return null;
+      const sw = bxGridCanvas.width, sh = bxGridCanvas.height;
+      if (sw <= 0 || sh <= 0) return null;
+      const dpr = surfaces.board.dpr || 1;
+      const cam = state.boardCam;
+      const px = dpr * (x * cam.zoom + cam.panX);
+      const py = dpr * (y * cam.zoom + cam.panY);
+      const cropH = sw * (9 / 16);
+      return {
+        nx: Math.round((px / sw) * 10000) / 10000,
+        ny: Math.round((py / cropH) * 10000) / 10000,
+        nw: Math.round(((width * cam.zoom * dpr) / sw) * 100000) / 100000
+      };
+    } else {
+      const pno = state.currentPage || 1;
+      const surf = surfaces[pno];
+      if (!surf || !surf.mounted || !surf.baseCanvas) return null;
+      const sw = surf.baseCanvas.width, sh = surf.baseCanvas.height;
+      if (sw <= 0 || sh <= 0) return null;
+      const dpr = surf.dpr || 1;
+      if (tvPresentMode === 'full_page') {
+        if (sid !== pno) return null;
+        const scale = Math.min(W / sw, H / sh);
+        const dw = sw * scale, dh = sh * scale;
+        const dx = (W - dw) * 0.5, dy = (H - dh) * 0.5;
+        return {
+          nx: Math.round(((dx + x * dpr * scale) / W) * 10000) / 10000,
+          ny: Math.round(((dy + y * dpr * scale) / H) * 10000) / 10000,
+          nw: Math.round(((width * dpr * scale) / W) * 100000) / 100000
+        };
+      } else {
+        const elTop = surf.wrap ? surf.wrap.offsetTop : 0;
+        const visOffsetCss = Math.max(0, pdfScroll.scrollTop - elTop);
+        const srcY = Math.min(sh - 10, Math.round(visOffsetCss * dpr));
+        const cropH = Math.round(sw * (9 / 16));
+        if (sid === pno) {
+          return {
+            nx: Math.round(((x * dpr) / sw) * 10000) / 10000,
+            ny: Math.round(((y * dpr - srcY) / cropH) * 10000) / 10000,
+            nw: Math.round(((width * dpr) / sw) * 100000) / 100000
+          };
+        }
+        return null;
+      }
+    }
+  }
+
+  function tvEmitStrokeStart(sid, previewObj, pt) {
+    if (!tvStageActive || !previewObj || !pt) return;
+    const t0 = performance.now();
+    const mapped = mapSurfacePointToTvNorm(sid, pt.x, pt.y, previewObj.width || 2.5);
+    if (!mapped) return;
+    tvActiveStrokeId++;
+    tvActiveStrokeSid = sid;
+    tvStrokeBuf = [];
+    const sampleMs = performance.now() - t0;
+    pushTvMetric(tvMetrics.deltaSampleMs, sampleMs);
+    const key = 's_' + tvActiveStrokeId + '_0';
+    const res = tvPublishPacket({
+      type: 'stroke_start',
+      strokeId: tvActiveStrokeId,
+      seqKey: key,
+      color: previewObj.color || '#0F172A',
+      nw: mapped.nw,
+      alpha: previewObj.type === 'to_sang' ? 0.35 : 1.0,
+      dashed: Boolean(previewObj.dashed),
+      pt: [mapped.nx, mapped.ny],
+      t0: Date.now()
+    });
+    pushTvMetric(tvMetrics.deltaBytes, res.bytes);
+    tvStrokeSentMeta.set(key, { t0Perf: performance.now() });
+    if (tvStrokeSentMeta.size > 80) {
+      const firstKey = tvStrokeSentMeta.keys().next().value;
+      tvStrokeSentMeta.delete(firstKey);
+    }
+  }
+
+  function tvFlushStrokeBuffer() {
+    tvStrokeRafId = 0;
+    if (!tvStageActive || !tvActiveStrokeId || tvStrokeBuf.length === 0) return;
+    const pts = tvStrokeBuf;
+    tvStrokeBuf = [];
+    const key = 'p_' + tvActiveStrokeId + '_' + Math.round(performance.now());
+    const res = tvPublishPacket({
+      type: 'stroke_pts',
+      strokeId: tvActiveStrokeId,
+      seqKey: key,
+      pts: pts,
+      t0: Date.now()
+    });
+    pushTvMetric(tvMetrics.deltaBytes, res.bytes);
+    tvStrokeSentMeta.set(key, { t0Perf: performance.now() });
+    if (tvStrokeSentMeta.size > 80) {
+      const firstKey = tvStrokeSentMeta.keys().next().value;
+      tvStrokeSentMeta.delete(firstKey);
+    }
+  }
+
+  function tvQueueStrokePoint(sid, pt) {
+    if (!tvStageActive || !tvActiveStrokeId || sid !== tvActiveStrokeSid || !pt) return;
+    const t0 = performance.now();
+    const mapped = mapSurfacePointToTvNorm(sid, pt.x, pt.y, 1);
+    if (!mapped) return;
+    pushTvMetric(tvMetrics.deltaSampleMs, performance.now() - t0);
+    tvStrokeBuf.push([mapped.nx, mapped.ny]);
+    // Gửi ngay theo từng rAF (~16ms) hoặc ngay lập tức khi đủ 6 điểm mới để độ trễ tối thiểu
+    if (tvStrokeBuf.length >= 6) {
+      if (tvStrokeRafId) { cancelAnimationFrame(tvStrokeRafId); tvStrokeRafId = 0; }
+      tvFlushStrokeBuffer();
+    } else if (!tvStrokeRafId) {
+      tvStrokeRafId = requestAnimationFrame(tvFlushStrokeBuffer);
+    }
+  }
+
+  function tvEmitStrokeEnd(sid) {
+    if (!tvStageActive || !tvActiveStrokeId) return;
+    if (tvStrokeRafId) { cancelAnimationFrame(tvStrokeRafId); tvStrokeRafId = 0; }
+    tvFlushStrokeBuffer();
+    const sidEnd = tvActiveStrokeId;
+    tvActiveStrokeSid = null;
+    tvPublishPacket({
+      type: 'stroke_end',
+      strokeId: sidEnd,
+      t0: Date.now()
+    });
+  }
 
   function renderFrame16x9() {
-    const W = tv169Canvas.width, H = tv169Canvas.height; // Đúng tỷ lệ vàng 16:9 (1280 x 720)
+    const W = tv169Canvas.width, H = tv169Canvas.height;
+    tv169Ctx.imageSmoothingEnabled = true;
+    tv169Ctx.imageSmoothingQuality = 'high';
     let bg = '#FFFFFF';
     if (state.mode === 'board' && surfaces.board && bxGridCanvas && bxInkCanvas) {
-      bg = '#0B6251';
+      const bgMap = { green: '#0B6251', black: '#14171A', white: '#FFFFFF', cream: '#FDF6E3' };
+      bg = bgMap[state.boardTheme] || '#0B6251';
       const sw = bxGridCanvas.width, sh = bxGridCanvas.height;
       if (sw > 0 && sh > 0) {
         tv169Ctx.fillStyle = bg;
         tv169Ctx.fillRect(0, 0, W, H);
-        // Cắt ĐÚNG TỪ MÉP TRÊN-TRÁI sang MÉP TRÊN-PHẢI rồi kéo xuống đúng tỷ lệ 16:9 (chỉ lấy nội dung bảng, 0% công cụ, 0% viền đen!)
         const cropH = Math.min(sh, Math.round(sw * (9 / 16)));
         const drawH = Math.round(W * (cropH / sw));
         tv169Ctx.drawImage(bxGridCanvas, 0, 0, sw, cropH, 0, 0, W, drawH);
         tv169Ctx.drawImage(bxInkCanvas, 0, 0, sw, cropH, 0, 0, W, drawH);
-        if (bxActiveCanvas) tv169Ctx.drawImage(bxActiveCanvas, 0, 0, sw, cropH, 0, 0, W, drawH);
       }
     } else {
       const pno = state.currentPage || 1;
@@ -3889,10 +4141,7 @@
             const dx = (W - dw) * 0.5, dy = (H - dh) * 0.5;
             tv169Ctx.drawImage(surf.baseCanvas, dx, dy, dw, dh);
             tv169Ctx.drawImage(surf.inkCanvas, dx, dy, dw, dh);
-            if (surf.activeCanvas) tv169Ctx.drawImage(surf.activeCanvas, dx, dy, dw, dh);
           } else {
-            // CẮT ĐÚNG TỪ MÉP TRÊN-TRÁI SANG MÉP TRÊN-PHẢI của khung nhìn hiện tại, kéo xuống đúng tỷ lệ 16:9!
-            // Phần dưới trang thiếu cũng không sao, 100% tràn kín 16:9 TV, 0% công cụ, 0% viền đen!
             const elTop = surf.wrap ? surf.wrap.offsetTop : 0;
             const visOffsetCss = Math.max(0, pdfScroll.scrollTop - elTop);
             const srcY = Math.min(sh - 10, Math.round(visOffsetCss * surf.dpr));
@@ -3902,9 +4151,7 @@
 
             tv169Ctx.drawImage(surf.baseCanvas, 0, srcY, sw, availH, 0, 0, W, drawH);
             tv169Ctx.drawImage(surf.inkCanvas, 0, srcY, sw, availH, 0, 0, W, drawH);
-            if (surf.activeCanvas) tv169Ctx.drawImage(surf.activeCanvas, 0, srcY, sw, availH, 0, 0, W, drawH);
 
-            // Nếu vùng cắt 16:9 chạm qua trang kế tiếp đã nạp, ghép nối liền mạch phần đầu trang sau vào phần còn lại
             if (availH < cropH && surfaces[pno + 1] && surfaces[pno + 1].mounted && surfaces[pno + 1].baseCanvas) {
               const nextS = surfaces[pno + 1];
               const remH = H - drawH - 8;
@@ -3923,28 +4170,151 @@
     return bg;
   }
 
+  function finishTvInFlight(frameId, tvDecodeMs, tvDrawMs) {
+    const meta = tvInFlightMeta.get(frameId);
+    if (meta) {
+      const rtt = performance.now() - meta.t0Perf;
+      pushTvMetric(tvMetrics.frameRttMs, rtt);
+      if (Number.isFinite(tvDecodeMs)) pushTvMetric(tvMetrics.tvDecodeMs, tvDecodeMs);
+      if (Number.isFinite(tvDrawMs)) pushTvMetric(tvMetrics.tvDrawMs, tvDrawMs);
+      tvInFlightMeta.delete(frameId);
+    }
+    if (frameId === tvFrameInFlightId || frameId === 0) {
+      tvFrameInFlightId = 0;
+      if (tvFrameAckWatchdog) { clearTimeout(tvFrameAckWatchdog); tvFrameAckWatchdog = null; }
+      if (tvPendingSync && tvStageActive) {
+        const force = tvPendingForce;
+        tvPendingSync = false;
+        tvPendingForce = false;
+        scheduleTvFrameSync('flush_pending', force);
+      }
+    }
+  }
+
   function broadcastFrameToTv(forceSend = false) {
     if (!tvStageActive) return;
+    if (tvFrameEncoding || tvFrameInFlightId !== 0) {
+      tvPendingSync = true;
+      tvPendingForce = tvPendingForce || forceSend;
+      return;
+    }
+    tvFrameEncoding = true;
     try {
+      const tCap0 = performance.now();
       const bg = renderFrame16x9();
-      const dataUrl = tv169Canvas.toDataURL('image/jpeg', 0.65);
-      if (!forceSend && dataUrl === tvLastFrameHash) return;
-      tvLastFrameHash = dataUrl;
-      if (tvChannel) {
-        tvChannel.postMessage({ type: 'frame', dataUrl, bg });
+      const captureMs = performance.now() - tCap0;
+      pushTvMetric(tvMetrics.captureMs, captureMs);
+
+      const tEnc0 = performance.now();
+      const finishWithDataUrl = (dataUrl, blobSize) => {
+        tvFrameEncoding = false;
+        if (!tvStageActive || !dataUrl) return;
+        const encodeMs = performance.now() - tEnc0;
+        pushTvMetric(tvMetrics.encodeMs, encodeMs);
+
+        const sig = `${blobSize}_${dataUrl.slice(0, 64)}_${dataUrl.slice(-64)}`;
+        if (!forceSend && sig === tvLastFrameSig) {
+          if (tvPendingSync) {
+            const f = tvPendingForce;
+            tvPendingSync = false;
+            tvPendingForce = false;
+            scheduleTvFrameSync('after_skip', f);
+          }
+          return;
+        }
+        tvLastFrameSig = sig;
+        const frameId = ++tvFrameSeq;
+        tvFrameInFlightId = frameId;
+        const tSentPerf = performance.now();
+        const res = tvPublishPacket({
+          type: 'frame',
+          frameId: frameId,
+          mime: tvEncodeMime,
+          w: tv169Canvas.width,
+          h: tv169Canvas.height,
+          bg: bg,
+          clearInk: true,
+          lastStrokeId: tvActiveStrokeId,
+          dataUrl: dataUrl,
+          t0: Date.now()
+        });
+        pushTvMetric(tvMetrics.publishMs, res.publishMs);
+        pushTvMetric(tvMetrics.frameBytes, res.bytes);
+        tvInFlightMeta.set(frameId, {
+          t0Perf: tSentPerf,
+          captureMs,
+          encodeMs,
+          publishMs: res.publishMs,
+          bytes: res.bytes
+        });
+        if (tvInFlightMeta.size > 30) {
+          const oldK = tvInFlightMeta.keys().next().value;
+          tvInFlightMeta.delete(oldK);
+        }
+        // Watchdog an toàn 450ms: nếu gói ACK bị rớt mạng, tự giải phóng để không bao giờ kẹt pipeline
+        if (tvFrameAckWatchdog) clearTimeout(tvFrameAckWatchdog);
+        tvFrameAckWatchdog = setTimeout(() => {
+          finishTvInFlight(frameId, NaN, NaN);
+        }, 450);
+      };
+
+      // Dùng toBlob() bất đồng bộ để KHÔNG khóa luồng giao diện Apple Pencil 120Hz!
+      if (typeof tv169Canvas.toBlob === 'function') {
+        tv169Canvas.toBlob((blob) => {
+          if (!blob) {
+            tvFrameEncoding = false;
+            return;
+          }
+          const reader = new FileReader();
+          reader.onloadend = () => finishWithDataUrl(reader.result, blob.size);
+          reader.onerror = () => { tvFrameEncoding = false; };
+          reader.readAsDataURL(blob);
+        }, tvEncodeMime, tvEncodeQuality);
+      } else {
+        const dataUrl = tv169Canvas.toDataURL(tvEncodeMime, tvEncodeQuality);
+        finishWithDataUrl(dataUrl, dataUrl.length);
       }
-      if (tvMqttClient && tvMqttClient.connected && tvMqttTopic) {
-        tvMqttClient.publish(tvMqttTopic, JSON.stringify({ type: 'frame', dataUrl, bg }), { qos: 0 });
-      }
-    } catch (_) {}
+    } catch (_) {
+      tvFrameEncoding = false;
+    }
+  }
+
+  function scheduleTvFrameSync(reason = 'change', force = false) {
+    if (!tvStageActive) return;
+    if (tvFrameEncoding || tvFrameInFlightId !== 0) {
+      tvPendingSync = true;
+      tvPendingForce = tvPendingForce || force;
+      return;
+    }
+    if (force) tvPendingForce = true;
+    if (!tvRafSyncId) {
+      tvRafSyncId = requestAnimationFrame(() => {
+        tvRafSyncId = 0;
+        const f = tvPendingForce;
+        tvPendingForce = false;
+        broadcastFrameToTv(f);
+      });
+    }
+  }
+
+  function scheduleTvScrollSync() {
+    if (!tvStageActive) return;
+    if (tvScrollThrottleTimer) return;
+    tvScrollThrottleTimer = setTimeout(() => {
+      tvScrollThrottleTimer = null;
+      scheduleTvFrameSync('scroll', false);
+    }, 80);
   }
 
   function startTvSyncLoop() {
     tvStageActive = true;
-    tvLastFrameHash = '';
-    if (tvSyncTimer) clearInterval(tvSyncTimer);
-    tvSyncTimer = setInterval(() => broadcastFrameToTv(false), 220);
-    broadcastFrameToTv(true);
+    tvLastFrameSig = '';
+    tvFrameEncoding = false;
+    tvFrameInFlightId = 0;
+    tvPendingSync = false;
+    tvPendingForce = false;
+    if (tvFrameAckWatchdog) { clearTimeout(tvFrameAckWatchdog); tvFrameAckWatchdog = null; }
+    scheduleTvFrameSync('start', true);
     const stopBtn = document.getElementById('btn-stop-tv-cast');
     if (stopBtn) stopBtn.style.display = 'inline-flex';
     const topBtn = document.getElementById('top-btn-present');
@@ -3953,8 +4323,17 @@
 
   function stopTvCast() {
     tvStageActive = false;
-    tvLastFrameHash = '';
-    if (tvSyncTimer) { clearInterval(tvSyncTimer); tvSyncTimer = null; }
+    tvLastFrameSig = '';
+    tvFrameEncoding = false;
+    tvFrameInFlightId = 0;
+    tvPendingSync = false;
+    tvPendingForce = false;
+    tvActiveStrokeSid = null;
+    tvStrokeBuf = [];
+    if (tvFrameAckWatchdog) { clearTimeout(tvFrameAckWatchdog); tvFrameAckWatchdog = null; }
+    if (tvRafSyncId) { cancelAnimationFrame(tvRafSyncId); tvRafSyncId = 0; }
+    if (tvStrokeRafId) { cancelAnimationFrame(tvStrokeRafId); tvStrokeRafId = 0; }
+    if (tvScrollThrottleTimer) { clearTimeout(tvScrollThrottleTimer); tvScrollThrottleTimer = null; }
     if (tvMqttClient) {
       try {
         if (tvMqttClient.connected && tvMqttTopic) {
@@ -3975,9 +4354,22 @@
 
   if (tvChannel) {
     tvChannel.onmessage = (ev) => {
-      if (ev.data && ev.data.type === 'tv_ready') {
+      const msg = ev.data;
+      if (!msg) return;
+      if (msg.type === 'tv_ready') {
         startTvSyncLoop();
         notify('📺 Đã kết nối Màn hình TV 16:9 (0% viền đen, iPad vẫn giữ nguyên công cụ)!');
+      } else if (msg.type === 'frame_ack') {
+        finishTvInFlight(msg.frameId || 0, msg.decodeMs, msg.drawMs);
+      } else if (msg.type === 'stroke_ack' && msg.seqKey) {
+        const sm = tvStrokeSentMeta.get(msg.seqKey);
+        if (sm) {
+          pushTvMetric(tvMetrics.deltaRttMs, performance.now() - sm.t0Perf);
+          if (Number.isFinite(msg.drawMs)) pushTvMetric(tvMetrics.tvStrokeDrawMs, msg.drawMs);
+          tvStrokeSentMeta.delete(msg.seqKey);
+        }
+      } else if (msg.type === 'tv_need_snapshot') {
+        scheduleTvFrameSync('tv_need_snapshot', true);
       }
     };
   }
@@ -3986,7 +4378,7 @@
     r.addEventListener('change', () => {
       if (r.checked) {
         tvPresentMode = r.value;
-        broadcastFrameToTv();
+        scheduleTvFrameSync('mode', true);
       }
     });
   });
@@ -3994,7 +4386,6 @@
   const topPresentBtn = document.getElementById('top-btn-present');
   if (topPresentBtn) {
     topPresentBtn.addEventListener('click', () => {
-      // KHÔNG ẩn công cụ trên iPad! Chỉ mở bảng điều khiển chiếu sang TV 16:9
       if (presentModal) presentModal.classList.remove('hidden');
     });
   }
@@ -4011,8 +4402,6 @@
   let tvAckTimer = null;
 
   function connectAndHandshakeTv(mode) {
-    // mode: 'test' (Bấm nút TEST -> TV hiện chữ vàng lớn "NKPDF — KẾT NỐI THÀNH CÔNG" và gửi ACK)
-    // mode: 'cast' (Bấm nút Chiếu lên TV -> TV xác nhận ACK rồi iPad mới báo thành công và phát hình 16:9)
     const codeInput = document.getElementById('tv-code-input');
     const statusEl = document.getElementById('tv-connect-status');
     const code = (codeInput ? codeInput.value : '').trim();
@@ -4077,14 +4466,12 @@
       });
       tvMqttClient = cl;
 
-      // Timeout chờ kết nối + nhận ACK từ TV trên broker này (4.5 giây)
       tvAckTimer = setTimeout(() => {
         nextBrokerOnFail();
       }, 4500);
 
       cl.on('connect', () => {
         if (movedNext) return;
-        // KHÔNG báo "Đã kết nối TV" khi mới chỉ nối tới Broker! Phải chờ TV trả lời ACK.
         if (statusEl) {
           statusEl.style.color = '#0284C7';
           statusEl.textContent = '⏳ Bước 2/2: Đã nối ' + b.name + '. Đang gửi gói ' + (mode === 'test' ? 'TEST' : 'ghép nối') + ' và chờ TV mã ' + code + ' xác nhận (ACK)...';
@@ -4103,10 +4490,12 @@
       });
 
       cl.on('message', (t, payload) => {
-        if (t !== ackTopic || ackReceived || movedNext) return;
+        if (t !== ackTopic || movedNext) return;
         try {
           const msg = JSON.parse(payload.toString());
-          if (msg && msg.type === 'ack' && String(msg.roomCode) === code) {
+          if (!msg || String(msg.roomCode) !== code) return;
+
+          if (msg.type === 'ack' && !ackReceived) {
             ackReceived = true;
             if (tvAckTimer) { clearTimeout(tvAckTimer); tvAckTimer = null; }
             if (mode === 'test') {
@@ -4117,13 +4506,23 @@
               notify('✅ TV mã ' + code + ' đã xác nhận TEST thành công!');
             } else {
               startTvSyncLoop();
-              broadcastFrameToTv(true);
               if (statusEl) {
                 statusEl.style.color = '#047857';
                 statusEl.textContent = '✅ Đã xác nhận ACK từ TV mã ' + code + ' (' + (msg.brokerName || b.name) + ')! Đang chiếu tràn viền 16:9.';
               }
               notify('📺 Đã xác nhận kết nối & chiếu 16:9 lên TV mã ' + code + '!');
             }
+          } else if (msg.type === 'frame_ack') {
+            finishTvInFlight(msg.frameId || 0, msg.decodeMs, msg.drawMs);
+          } else if (msg.type === 'stroke_ack' && msg.seqKey) {
+            const sm = tvStrokeSentMeta.get(msg.seqKey);
+            if (sm) {
+              pushTvMetric(tvMetrics.deltaRttMs, performance.now() - sm.t0Perf);
+              if (Number.isFinite(msg.drawMs)) pushTvMetric(tvMetrics.tvStrokeDrawMs, msg.drawMs);
+              tvStrokeSentMeta.delete(msg.seqKey);
+            }
+          } else if (msg.type === 'tv_need_snapshot') {
+            scheduleTvFrameSync('tv_need_snapshot', true);
           }
         } catch (_) {}
       });

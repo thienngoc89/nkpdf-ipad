@@ -17,15 +17,24 @@
       justify-content: center;
       font-family: "Be Vietnam Pro", "Segoe UI", -apple-system, sans-serif;
     }
-    #tv-stage {
+    #tv-viewport {
       position: fixed;
       inset: 0;
       width: 100vw;
       height: 100vh;
-      display: block;
-      background: #FFFFFF;
+      overflow: hidden;
+      background: #0B192C;
     }
-    #tv-stage.hidden { display: none; }
+    #tv-viewport.hidden { display: none; }
+    #tv-base-canvas, #tv-ink-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    #tv-base-canvas { z-index: 1; background: #FFFFFF; }
+    #tv-ink-canvas { z-index: 2; pointer-events: none; background: transparent; }
     #tv-waiting {
       position: fixed;
       inset: 0;
@@ -138,7 +147,10 @@
   </style>
 </head>
 <body>
-  <canvas id="tv-stage" class="hidden"></canvas>
+  <div id="tv-viewport" class="hidden">
+    <canvas id="tv-base-canvas"></canvas>
+    <canvas id="tv-ink-canvas"></canvas>
+  </div>
 
   <div id="tv-test-banner" class="hidden">
     <div id="tv-test-title">NKPDF — KẾT NỐI THÀNH CÔNG</div>
@@ -161,8 +173,11 @@
 
   <script>
     (function () {
-      var canvas = document.getElementById('tv-stage');
+      var viewport = document.getElementById('tv-viewport');
+      var canvas = document.getElementById('tv-base-canvas');
       var ctx = canvas.getContext('2d');
+      var inkCanvas = document.getElementById('tv-ink-canvas');
+      var inkCtx = inkCanvas.getContext('2d');
       var waiting = document.getElementById('tv-waiting');
       var codeEl = document.getElementById('tv-room-code');
       var statusEl = document.getElementById('tv-status');
@@ -173,28 +188,198 @@
       var backBtn = document.getElementById('tv-back-btn');
       var testHideTimer = null;
 
+      // Vùng hiển thị thực tế (giữ nguyên tỉ lệ hình học, không kéo giãn ảnh)
+      var imgRect = { x: 0, y: 0, w: 1280, h: 720 };
+      var lastRenderedImg = null;
+      var lastRenderedBg = '#FFFFFF';
+      var liveStrokes = {}; // strokeId -> { color, nw, alpha, dashed, pts: [[nx,ny], ...] }
+      var highestStrokeId = 0;
+      var hasConnectedOnce = false;
+
       function resizeStage() {
         var dpr = Math.min(2, window.devicePixelRatio || 1);
-        canvas.width = Math.round(window.innerWidth * dpr);
-        canvas.height = Math.round(window.innerHeight * dpr);
+        var cw = Math.max(1, Math.round(window.innerWidth * dpr));
+        var ch = Math.max(1, Math.round(window.innerHeight * dpr));
+        canvas.width = cw;
+        canvas.height = ch;
+        inkCanvas.width = cw;
+        inkCanvas.height = ch;
+        if (lastRenderedImg) {
+          drawBaseImage(lastRenderedImg, lastRenderedBg);
+        } else {
+          computeImgRect(16, 9);
+        }
+        redrawAllLiveStrokes();
       }
+
+      function computeImgRect(srcW, srcH) {
+        var cw = canvas.width, ch = canvas.height;
+        if (!srcW || !srcH) {
+          imgRect = { x: 0, y: 0, w: cw, h: ch };
+          return;
+        }
+        var scale = Math.min(cw / srcW, ch / srcH);
+        var dw = Math.round(srcW * scale);
+        var dh = Math.round(srcH * scale);
+        var dx = Math.round((cw - dw) * 0.5);
+        var dy = Math.round((ch - dh) * 0.5);
+        imgRect = { x: dx, y: dy, w: dw, h: dh };
+      }
+
+      function drawBaseImage(img, bg) {
+        var tDraw0 = performance.now();
+        var cw = canvas.width, ch = canvas.height;
+        computeImgRect(img.naturalWidth || img.width, img.naturalHeight || img.height);
+        ctx.fillStyle = bg || '#FFFFFF';
+        ctx.fillRect(0, 0, cw, ch);
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(img, imgRect.x, imgRect.y, imgRect.w, imgRect.h);
+        return performance.now() - tDraw0;
+      }
+
+      function drawStrokeSegment(st, idx) {
+        var pts = st.pts;
+        if (!pts || pts.length < 1) return;
+        inkCtx.save();
+        inkCtx.strokeStyle = st.color || '#0F172A';
+        inkCtx.fillStyle = st.color || '#0F172A';
+        inkCtx.lineWidth = Math.max(1.5, (st.nw || 0.0025) * imgRect.w);
+        inkCtx.lineCap = 'round';
+        inkCtx.lineJoin = 'round';
+        inkCtx.globalAlpha = typeof st.alpha === 'number' ? st.alpha : 1.0;
+        if (st.dashed) inkCtx.setLineDash([inkCtx.lineWidth * 3.5, inkCtx.lineWidth * 2.5]);
+
+        if (pts.length === 1) {
+          var x0 = imgRect.x + pts[0][0] * imgRect.w;
+          var y0 = imgRect.y + pts[0][1] * imgRect.h;
+          inkCtx.beginPath();
+          inkCtx.arc(x0, y0, inkCtx.lineWidth * 0.5, 0, Math.PI * 2);
+          inkCtx.fill();
+        } else if (idx >= 2) {
+          var p0 = pts[idx - 2], p1 = pts[idx - 1], p2 = pts[idx];
+          var x0 = imgRect.x + p0[0] * imgRect.w, y0 = imgRect.y + p0[1] * imgRect.h;
+          var x1 = imgRect.x + p1[0] * imgRect.w, y1 = imgRect.y + p1[1] * imgRect.h;
+          var x2 = imgRect.x + p2[0] * imgRect.w, y2 = imgRect.y + p2[1] * imgRect.h;
+          var mx1 = (x0 + x1) * 0.5, my1 = (y0 + y1) * 0.5;
+          var mx2 = (x1 + x2) * 0.5, my2 = (y1 + y2) * 0.5;
+          inkCtx.beginPath();
+          inkCtx.moveTo(mx1, my1);
+          inkCtx.quadraticCurveTo(x1, y1, mx2, my2);
+          inkCtx.stroke();
+        } else {
+          var pa = pts[idx - 1], pb = pts[idx];
+          inkCtx.beginPath();
+          inkCtx.moveTo(imgRect.x + pa[0] * imgRect.w, imgRect.y + pa[1] * imgRect.h);
+          inkCtx.lineTo(imgRect.x + pb[0] * imgRect.w, imgRect.y + pb[1] * imgRect.h);
+          inkCtx.stroke();
+        }
+        inkCtx.restore();
+      }
+
+      function redrawAllLiveStrokes() {
+        inkCtx.clearRect(0, 0, inkCanvas.width, inkCanvas.height);
+        var keys = Object.keys(liveStrokes);
+        for (var k = 0; k < keys.length; k++) {
+          var st = liveStrokes[keys[k]];
+          if (!st || !st.pts || !st.pts.length) continue;
+          if (st.pts.length === 1) {
+            drawStrokeSegment(st, 0);
+          } else {
+            for (var i = 1; i < st.pts.length; i++) drawStrokeSegment(st, i);
+          }
+        }
+      }
+
+      function clearCommittedLiveStrokes(upToStrokeId) {
+        var keys = Object.keys(liveStrokes);
+        var changed = false;
+        for (var k = 0; k < keys.length; k++) {
+          var id = Number(keys[k]);
+          if (!upToStrokeId || id <= upToStrokeId) {
+            delete liveStrokes[keys[k]];
+            changed = true;
+          }
+        }
+        if (changed) redrawAllLiveStrokes();
+      }
+
       resizeStage();
       window.addEventListener('resize', resizeStage);
 
-      function renderDataFrame(dataUrl, bg) {
-        if (!dataUrl) return;
+      function renderDataFrame(msg, ackPublishFn) {
+        if (!msg || !msg.dataUrl) return;
         if (testBanner) testBanner.classList.add('hidden');
         waiting.classList.add('hidden');
-        canvas.classList.remove('hidden');
+        viewport.classList.remove('hidden');
         backBtn.style.opacity = '0.2';
+
+        var tDec0 = performance.now();
         var img = new Image();
         img.onload = function () {
-          var cw = canvas.width, chH = canvas.height;
-          ctx.fillStyle = bg || '#FFFFFF';
-          ctx.fillRect(0, 0, cw, chH);
-          ctx.drawImage(img, 0, 0, cw, chH);
+          var decodeMs = Math.round((performance.now() - tDec0) * 10) / 10;
+          lastRenderedImg = img;
+          lastRenderedBg = msg.bg || '#FFFFFF';
+          var drawMs = Math.round(drawBaseImage(img, lastRenderedBg) * 10) / 10;
+          if (msg.clearInk) {
+            clearCommittedLiveStrokes(msg.lastStrokeId || highestStrokeId);
+          }
+          if (typeof ackPublishFn === 'function') {
+            ackPublishFn({
+              type: 'frame_ack',
+              roomCode: roomCode,
+              frameId: msg.frameId || 0,
+              decodeMs: decodeMs,
+              drawMs: drawMs,
+              ts: Date.now()
+            });
+          }
         };
-        img.src = dataUrl;
+        img.src = msg.dataUrl;
+      }
+
+      function handleStrokeDelta(msg, ackPublishFn) {
+        if (!msg || !msg.strokeId) return;
+        var t0 = performance.now();
+        var sid = Number(msg.strokeId);
+        if (sid > highestStrokeId) highestStrokeId = sid;
+
+        if (msg.type === 'stroke_start' && msg.pt) {
+          liveStrokes[sid] = {
+            color: msg.color || '#0F172A',
+            nw: msg.nw || 0.0025,
+            alpha: typeof msg.alpha === 'number' ? msg.alpha : 1.0,
+            dashed: Boolean(msg.dashed),
+            pts: [msg.pt]
+          };
+          if (testBanner) testBanner.classList.add('hidden');
+          waiting.classList.add('hidden');
+          viewport.classList.remove('hidden');
+          drawStrokeSegment(liveStrokes[sid], 0);
+        } else if (msg.type === 'stroke_pts' && Array.isArray(msg.pts)) {
+          var st = liveStrokes[sid];
+          if (st) {
+            var startIdx = st.pts.length;
+            for (var i = 0; i < msg.pts.length; i++) {
+              st.pts.push(msg.pts[i]);
+              drawStrokeSegment(st, startIdx + i);
+            }
+          }
+        } else if (msg.type === 'stroke_end') {
+          // Giữ nét trên lớp ink cho đến khi snapshot đồng bộ trạng thái cuối (clearInk:true) về tới!
+        }
+
+        var drawMs = Math.round((performance.now() - t0) * 10) / 10;
+        if (msg.seqKey && typeof ackPublishFn === 'function') {
+          ackPublishFn({
+            type: 'stroke_ack',
+            roomCode: roomCode,
+            strokeId: sid,
+            seqKey: msg.seqKey,
+            drawMs: drawMs,
+            ts: Date.now()
+          });
+        }
       }
 
       function showTestSuccessOnTv(brokerName, roomCode) {
@@ -322,6 +507,15 @@
             statusEl.style.color = '#34D399';
             statusEl.textContent = '✅ SẴN SÀNG KẾT NỐI! Nhập mã ' + roomCode + ' trên iPad.';
             detailEl.textContent = '🟢 Broker: ' + b.name + ' | Kênh: ' + topicCmd + ' (Đã Subscribe thành công)';
+            if (hasConnectedOnce) {
+              // Tự khôi phục bằng snapshot khi mất kết nối rồi nối lại
+              client.publish(topicAck, JSON.stringify({
+                type: 'tv_need_snapshot',
+                roomCode: roomCode,
+                ts: Date.now()
+              }));
+            }
+            hasConnectedOnce = true;
           });
         });
 
@@ -330,39 +524,44 @@
             var raw = payload ? payload.toString() : '';
             var msg = JSON.parse(raw);
             if (!msg) return;
+            var sendAck = function (obj) {
+              try { client.publish(topicAck, JSON.stringify(obj), { qos: 0 }); } catch (e) {}
+            };
 
             if (msg.type === 'test') {
-              // 1. Hiển thị chữ vàng lớn trên TV: NKPDF — KẾT NỐI THÀNH CÔNG
               showTestSuccessOnTv(b.name, roomCode);
               statusEl.style.color = '#FACC15';
               statusEl.textContent = '🌟 NKPDF — KẾT NỐI THÀNH CÔNG (Đã nhận TEST từ iPad)';
               detailEl.textContent = '🟢 Đã gửi gói ACK xác nhận về iPad qua ' + b.name;
-              // 2. Gửi ACK về iPad
-              client.publish(topicAck, JSON.stringify({
+              sendAck({
                 type: 'ack',
                 ackFor: 'test',
                 roomCode: roomCode,
                 brokerName: b.name,
                 brokerUrl: b.url,
                 ts: Date.now()
-              }));
+              });
             } else if (msg.type === 'ping') {
               statusEl.style.color = '#34D399';
               statusEl.textContent = '🔗 Đã ghép nối 2 chiều với iPad! Đang nhận hình ảnh 16:9...';
               detailEl.textContent = '🟢 Đã gửi ACK ghép nối về iPad qua ' + b.name;
-              client.publish(topicAck, JSON.stringify({
+              sendAck({
                 type: 'ack',
                 ackFor: 'ping',
                 roomCode: roomCode,
                 brokerName: b.name,
                 brokerUrl: b.url,
                 ts: Date.now()
-              }));
+              });
             } else if (msg.type === 'frame') {
-              renderDataFrame(msg.dataUrl, msg.bg);
+              renderDataFrame(msg, sendAck);
+            } else if (msg.type === 'stroke_start' || msg.type === 'stroke_pts' || msg.type === 'stroke_end') {
+              handleStrokeDelta(msg, sendAck);
             } else if (msg.type === 'stop') {
               waiting.classList.remove('hidden');
-              canvas.classList.add('hidden');
+              viewport.classList.add('hidden');
+              liveStrokes = {};
+              inkCtx.clearRect(0, 0, inkCanvas.width, inkCanvas.height);
               if (testBanner) testBanner.classList.add('hidden');
               statusEl.style.color = '#34D399';
               statusEl.textContent = '🔌 iPad đã ngắt trình chiếu. Mã phòng vẫn là ' + roomCode + '.';
