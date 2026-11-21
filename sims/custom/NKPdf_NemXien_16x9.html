@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mô phỏng Ném Xiên Chuẩn Thời Gian Thực</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; user-select: none; }
+  body { background: #1a1b1e; color: #f0f0f5; padding: 10px; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+  .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .title { font-size: 13px; font-weight: 700; color: #4dabf7; display: flex; align-items: center; gap: 6px; }
+  .badge { background: #2b8a3e; color: #fff; font-size: 9px; padding: 2px 5px; border-radius: 3px; font-weight: 600; }
+  .canvas-container { position: relative; flex: 1; background: #121216; border-radius: 6px; border: 1px solid #343a40; overflow: hidden; min-height: 180px; }
+  canvas { width: 100%; height: 100%; display: block; }
+  .controls-panel { margin-top: 6px; background: #25262b; border-radius: 6px; padding: 8px 10px; border: 1px solid #373a40; display: flex; flex-direction: column; gap: 5px; }
+  .sliders-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .control-group { display: flex; flex-direction: column; gap: 2px; }
+  .control-label { font-size: 10.5px; color: #adb5bd; display: flex; justify-content: space-between; }
+  .control-label span.val { color: #ffd43b; font-weight: 600; }
+  input[type="range"] { -webkit-appearance: none; width: 100%; height: 4px; border-radius: 2px; background: #495057; outline: none; }
+  input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: #339af0; cursor: pointer; }
+  .actions-row { display: flex; justify-content: space-between; align-items: center; margin-top: 2px; }
+  .btn-group { display: flex; gap: 5px; align-items: center; }
+  button { background: #3b5bdb; color: #fff; border: none; padding: 4px 10px; font-size: 10.5px; font-weight: 600; border-radius: 4px; cursor: pointer; transition: 0.15s; }
+  button:hover { background: #4c6ef5; }
+  button.reset { background: #495057; }
+  button.reset:hover { background: #5c636a; }
+  .speed-select { background: #2c2e33; color: #e9ecef; border: 1px solid #495057; border-radius: 4px; padding: 3px 6px; font-size: 10px; outline: none; }
+  .metrics { font-size: 10.5px; color: #ced4da; display: flex; gap: 10px; }
+  .metrics b { color: #51cf66; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="title">
+    <span>MÔ PHỎNG NÉM XIÊN VẬT LÍ 10</span>
+    <span class="badge">DELTA-T REALTIME CLOCK</span>
+  </div>
+  <div class="metrics">
+    <div>Hmax: <b id="m_hmax">0.0 m</b></div>
+    <div>L: <b id="m_range">0.0 m</b></div>
+    <div>t: <b id="m_time">0.00 s</b></div>
+  </div>
+</div>
+
+<div class="canvas-container">
+  <canvas id="simCanvas"></canvas>
+</div>
+
+<div class="controls-panel">
+  <div class="sliders-row">
+    <div class="control-group">
+      <div class="control-label">
+        <span>Vận tốc đầu $v_0$</span>
+        <span class="val" id="lbl_v0">20 m/s</span>
+      </div>
+      <input type="range" id="rng_v0" min="5" max="40" value="20" step="1">
+    </div>
+    <div class="control-group">
+      <div class="control-label">
+        <span>Góc ném $\alpha$</span>
+        <span class="val" id="lbl_alpha">45°</span>
+      </div>
+      <input type="range" id="rng_alpha" min="10" max="80" value="45" step="1">
+    </div>
+    <div class="control-group">
+      <div class="control-label">
+        <span>Gia tốc $g$</span>
+        <span class="val" id="lbl_g">9.8 m/s²</span>
+      </div>
+      <input type="range" id="rng_g" min="5" max="15" value="9.8" step="0.2">
+    </div>
+  </div>
+  
+  <div class="actions-row">
+    <div class="btn-group">
+      <button id="btn_play">▶ Phát</button>
+      <button class="reset" id="btn_reset">↺ Đặt lại</button>
+      <span style="font-size: 10px; color: #adb5bd; margin-left: 4px;">Tốc độ:</span>
+      <select class="speed-select" id="sel_speed">
+        <option value="0.5">0.5×</option>
+        <option value="1.0" selected>1.0×</option>
+        <option value="2.0">2.0×</option>
+      </select>
+    </div>
+    <div style="font-size: 9.5px; color: #868e96;" id="status_note">Thời gian thực tính toán chính xác theo delta-t</div>
+  </div>
+</div>
+
+<script>
+  const canvas = document.getElementById('simCanvas');
+  const ctx = canvas.getContext('2d');
+  
+  // Thông số vật lí
+  let v0 = 20;
+  let alpha = 45;
+  let g = 9.8;
+  let timeScale = 1.0;
+  
+  // Trạng thái đồng hồ mô phỏng (Simulation Clock)
+  let isRunning = false;
+  let simTime = 0;       // Thời gian mô phỏng (giây)
+  let lastWallTime = 0;   // Mốc thời gian thực từ performance.now()
+  let animId = null;
+  let trajectory = [];
+
+  function rad(deg) { return deg * Math.PI / 180; }
+
+  function calculateTheoretical() {
+    const a = rad(alpha);
+    const Hmax = (v0 * Math.sin(a)) ** 2 / (2 * g);
+    const L = (v0 ** 2 * Math.sin(2 * a)) / g;
+    const Ttotal = (2 * v0 * Math.sin(a)) / g;
+    document.getElementById('m_hmax').innerText = Hmax.toFixed(1) + ' m';
+    document.getElementById('m_range').innerText = L.toFixed(1) + ' m';
+    return { Hmax, L, Ttotal };
+  }
+
+  function resizeCanvas() {
+    canvas.width = canvas.parentElement.clientWidth;
+    canvas.height = canvas.parentElement.clientHeight;
+    draw();
+  }
+  window.addEventListener('resize', resizeCanvas);
+
+  function draw() {
+    const w = canvas.width;
+    const h = canvas.height;
+    ctx.clearRect(0, 0, w, h);
+
+    const padLeft = 40;
+    const padBottom = 26;
+    const padTop = 18;
+    const padRight = 24;
+
+    const { Hmax, L } = calculateTheoretical();
+    const maxWorldX = Math.max(50, L * 1.15);
+    const maxWorldY = Math.max(25, Hmax * 1.4);
+
+    const scaleX = (w - padLeft - padRight) / maxWorldX;
+    const scaleY = (h - padBottom - padTop) / maxWorldY;
+    const scale = Math.min(scaleX, scaleY);
+
+    const originX = padLeft;
+    const originY = h - padBottom;
+
+    // Lưới tọa độ
+    ctx.strokeStyle = '#25262c';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let x = 0; x <= maxWorldX; x += 10) {
+      const sx = originX + x * scale;
+      ctx.moveTo(sx, padTop);
+      ctx.lineTo(sx, originY);
+    }
+    for (let y = 0; y <= maxWorldY; y += 10) {
+      const sy = originY - y * scale;
+      ctx.moveTo(originX, sy);
+      ctx.lineTo(w - padRight, sy);
+    }
+    ctx.stroke();
+
+    // Hệ trục Oxy
+    ctx.strokeStyle = '#868e96';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(originX, originY);
+    ctx.lineTo(w - padRight, originY);
+    ctx.moveTo(originX, originY);
+    ctx.lineTo(originX, padTop);
+    ctx.stroke();
+
+    // Nhãn trục
+    ctx.fillStyle = '#adb5bd';
+    ctx.font = '10px sans-serif';
+    ctx.fillText('x (m)', w - padRight - 15, originY + 16);
+    ctx.fillText('y (m)', originX - 24, padTop + 10);
+
+    // Quỹ đạo lí thuyết (nét đứt)
+    ctx.strokeStyle = '#495057';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    const a = rad(alpha);
+    for (let px = 0; px <= L; px += 0.5) {
+      const py = px * Math.tan(a) - (g * px * px) / (2 * (v0 * Math.cos(a)) ** 2);
+      const sx = originX + px * scale;
+      const sy = originY - py * scale;
+      if (px === 0) ctx.moveTo(sx, sy);
+      else ctx.lineTo(sx, sy);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Quỹ đạo thực tế đã đi qua
+    if (trajectory.length > 1) {
+      ctx.strokeStyle = '#74c0fc';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      for (let i = 0; i < trajectory.length; i++) {
+        const sx = originX + trajectory[i].x * scale;
+        const sy = originY - trajectory[i].y * scale;
+        if (i === 0) ctx.moveTo(sx, sy);
+        else ctx.lineTo(sx, sy);
+      }
+      ctx.stroke();
+    }
+
+    // Tọa độ vật thể tại simTime
+    const aRad = rad(alpha);
+    const currX = v0 * Math.cos(aRad) * simTime;
+    const currY = Math.max(0, v0 * Math.sin(aRad) * simTime - 0.5 * g * simTime * simTime);
+    const ballSX = originX + currX * scale;
+    const ballSY = originY - currY * scale;
+
+    // Vectơ vận tốc v tại thời điểm simTime
+    const vx = v0 * Math.cos(aRad);
+    const vy = v0 * Math.sin(aRad) - g * simTime;
+    const vScale = 1.0;
+    ctx.strokeStyle = '#ff6b6b';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(ballSX, ballSY);
+    ctx.lineTo(ballSX + vx * vScale, ballSY - vy * vScale);
+    ctx.stroke();
+
+    // Vật thể tròn
+    ctx.fillStyle = '#ffd43b';
+    ctx.beginPath();
+    ctx.arc(ballSX, ballSY, 5.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#f08c00';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    document.getElementById('m_time').innerText = simTime.toFixed(2) + ' s';
+  }
+
+  // STATE MACHINE & ANIMATION ENGINE CHUẨN XÁC
+  function stopAnimation() {
+    if (animId) {
+      cancelAnimationFrame(animId);
+      animId = null;
+    }
+    isRunning = false;
+    lastWallTime = 0;
+  }
+
+  function updatePlayButtonUI(state) {
+    const btn = document.getElementById('btn_play');
+    if (!btn) return;
+    if (state === 'running') {
+      btn.innerText = '⏸ Tạm dừng';
+      btn.style.background = '#e03131';
+    } else if (state === 'paused') {
+      btn.innerText = '▶ Tiếp tục';
+      btn.style.background = '#2f9e44';
+    } else if (state === 'finished') {
+      btn.innerText = '↺ Phát lại từ đầu';
+      btn.style.background = '#1971c2';
+    } else {
+      btn.innerText = '▶ Bắt đầu phát';
+      btn.style.background = '#3b5bdb';
+    }
+  }
+
+  function startAnimation() {
+    stopAnimation();
+    const { Ttotal } = calculateTheoretical();
+    if (simTime >= Ttotal - 0.001) {
+      simTime = 0;
+      trajectory = [];
+    }
+    isRunning = true;
+    updatePlayButtonUI('running');
+    lastWallTime = performance.now();
+    animId = requestAnimationFrame(loop);
+  }
+
+  function pauseAnimation() {
+    stopAnimation();
+    updatePlayButtonUI('paused');
+    draw();
+  }
+
+  function resetSimulation() {
+    stopAnimation();
+    simTime = 0;
+    trajectory = [];
+    updatePlayButtonUI('ready');
+    draw();
+  }
+
+  function replaySimulation() {
+    resetSimulation();
+    startAnimation();
+  }
+
+  function togglePlay() {
+    const { Ttotal } = calculateTheoretical();
+    if (simTime >= Ttotal - 0.001) {
+      replaySimulation();
+    } else if (isRunning) {
+      pauseAnimation();
+    } else {
+      startAnimation();
+    }
+  }
+
+  // VÒNG LẶP ĐIỀU KHIỂN CHÍNH (DELTA-T CLOCK)
+  function loop(now) {
+    if (!isRunning) return;
+
+    if (!lastWallTime) lastWallTime = now;
+    const deltaWallSeconds = (now - lastWallTime) / 1000.0;
+    lastWallTime = now;
+
+    // Giới hạn delta tránh giật khi tab bị background
+    const clampedDelta = Math.min(deltaWallSeconds, 0.1);
+    simTime += clampedDelta * timeScale;
+
+    const { Ttotal } = calculateTheoretical();
+    const aRad = rad(alpha);
+    const currX = v0 * Math.cos(aRad) * simTime;
+    const currY = v0 * Math.sin(aRad) * simTime - 0.5 * g * simTime * simTime;
+
+    if (simTime >= Ttotal || currY < 0) {
+      simTime = Ttotal;
+      stopAnimation();
+      updatePlayButtonUI('finished');
+      trajectory.push({ x: v0 * Math.cos(aRad) * simTime, y: 0 });
+    } else {
+      trajectory.push({ x: currX, y: currY });
+      animId = requestAnimationFrame(loop);
+    }
+    draw();
+  }
+
+  document.getElementById('btn_play').addEventListener('click', togglePlay);
+  document.getElementById('btn_reset').addEventListener('click', resetSimulation);
+
+  document.getElementById('sel_speed').addEventListener('change', (e) => {
+    timeScale = parseFloat(e.target.value);
+  });
+
+  const rV0 = document.getElementById('rng_v0');
+  const rAlpha = document.getElementById('rng_alpha');
+  const rG = document.getElementById('rng_g');
+
+  function updateParams() {
+    v0 = parseFloat(rV0.value);
+    alpha = parseFloat(rAlpha.value);
+    g = parseFloat(rG.value);
+    document.getElementById('lbl_v0').innerText = v0 + ' m/s';
+    document.getElementById('lbl_alpha').innerText = alpha + '°';
+    document.getElementById('lbl_g').innerText = g + ' m/s²';
+
+    // Khi thay đổi thông số: Đặt lại trạng thái về ban đầu để tính toán theo bài toán mới
+    resetSimulation();
+  }
+
+  rV0.addEventListener('input', updateParams);
+  rAlpha.addEventListener('input', updateParams);
+  rG.addEventListener('input', updateParams);
+
+  // Expose API cho NKPdf Simulation Engine
+  window.simState = {
+    get v0() { return v0; },
+    get goc() { return alpha; },
+    get g() { return g; },
+    get running() { return isRunning; },
+    get t() { return simTime; }
+  };
+  window.simPlay = startAnimation;
+  window.simPause = pauseAnimation;
+  window.simToggle = togglePlay;
+  window.simReset = resetSimulation;
+  window.simReplay = replaySimulation;
+
+  window.capNhatThongSo = function(ten, giatri) {
+    if (ten === 'v0') { rV0.value = giatri; updateParams(); }
+    else if (ten === 'goc') { rAlpha.value = giatri; updateParams(); }
+    else if (ten === 'g') { rG.value = giatri; updateParams(); }
+  };
+  window.togglePlay = togglePlay;
+
+  // Khởi tạo
+  resetSimulation();
+  setTimeout(resizeCanvas, 50);
+</script>
+</body>
+</html>
+

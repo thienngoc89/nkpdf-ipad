@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NKPdf | Hai xe chuyển động - Mô phỏng 16:9</title>
+<style>
+:root{color-scheme:light;font-family:Inter,'Segoe UI',Arial,sans-serif;font-synthesis:none;--ink:#152743;--muted:#6b7c99;--line:#dce6f3;--blue:#3273df;--red:#e85258;--green:#14976d}
+*{box-sizing:border-box}
+html,body{height:100%;width:100%;margin:0;overflow:hidden;background:#0d192d}
+body{display:grid;place-items:center}
+#viewport{position:relative;flex:none;overflow:hidden;box-shadow:0 18px 60px #02061270;background:#eff4fb}
+#app{position:absolute;left:0;top:0;width:1600px;height:900px;transform-origin:0 0;background:linear-gradient(160deg,#f3f7ff,#eaf1fb);color:var(--ink);overflow:hidden}
+header{height:74px;padding:12px 26px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
+h1{margin:0;font-size:23px;letter-spacing:-.5px}header p{font-size:12px;color:var(--muted);margin:4px 0 0}
+.brand{display:flex;align-items:center;gap:13px}.logo{height:42px;width:42px;display:grid;place-items:center;background:#e9f1ff;color:#245cc6;font-size:25px;border-radius:12px}
+.tag{font-size:12px;color:#516887;background:#f1f6ff;border:1px solid #e1eaf8;border-radius:20px;padding:8px 13px;font-weight:700}
+.body{height:794px;padding:14px 20px;display:grid;grid-template-columns:370px minmax(0,1fr);gap:14px}
+aside{display:flex;flex-direction:column;gap:12px;min-height:0}
+.card{background:#fff;border:1px solid var(--line);border-radius:15px;box-shadow:0 3px 12px #274d8310;min-height:0}
+.pad{padding:15px 17px}h2{margin:0;font-size:14px;letter-spacing:.1px}.section-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:11px}
+.section-hint{font-size:11px;color:var(--muted)}
+.field label{display:block;font-weight:700;font-size:11px;color:#50627b;margin-bottom:5px}
+.field input,.field select{height:35px;width:100%;border:1px solid #cbd9ed;border-radius:8px;padding:0 10px;background:#fbfdff;font-size:13px;color:#203653;outline:none}
+.field input:focus,.field select:focus{border-color:#4f84e0;box-shadow:0 0 0 2px #b7d1ff66}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.space{margin-top:10px}
+.note{color:var(--muted);font-size:11px;line-height:1.5;margin:9px 0 0}
+.compact{padding:12px 16px}.compact .section-head{margin-bottom:8px}
+.car-chip{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:800}.chipdot{display:inline-block;width:10px;height:10px;border-radius:50%}
+.red{color:#d5414d}.blue{color:#2567bd}
+.controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+button{font:700 13px 'Segoe UI',Arial,sans-serif;border-radius:9px;cursor:pointer;height:38px;border:1px solid #d1deef;background:#f4f7fd;color:#2c4467;padding:0 12px;transition:filter .13s;white-space:nowrap}
+button:hover{filter:brightness(.96)}button:focus-visible{outline:3px solid #91bdff}button:disabled{opacity:.47;cursor:not-allowed}
+button.primary{background:var(--blue);border-color:var(--blue);color:white}
+button.green{background:#e2f5ed;border-color:#b3e1c9;color:#0b7852}
+button.slim{height:32px;font-size:12px}
+.checkrow{display:flex;align-items:center;gap:8px;font-size:12px;color:#3c4e67;cursor:pointer;margin:7px 0 0}.checkrow input{accent-color:#3577dd}
+.tip{font-size:11px;color:#5b7396;line-height:1.5;padding:3px 6px}.tip b{color:#1e466e}
+main{display:grid;grid-template-rows:473px minmax(0,1fr);gap:13px;min-width:0;min-height:0}
+.road-panel{padding:14px 17px 12px;display:flex;flex-direction:column;overflow:hidden}
+.panel-heading{display:flex;align-items:center;justify-content:space-between;height:26px;flex:none;margin-bottom:9px}
+.panel-heading h2{font-size:15px}.pill{font-size:11px;font-weight:800;color:#147d5b;background:#e6f7ef;border-radius:20px;padding:5px 10px}
+#road{width:100%;height:313px;display:block;flex:none;border:1px solid #d8e5f3;border-radius:11px;background:#eaf5fb;touch-action:none;cursor:default}
+#road.dragging{cursor:grabbing}
+.timeline{display:flex;align-items:center;gap:14px;height:36px;margin-top:8px}
+.timecode{width:120px;font-weight:800;font-variant-numeric:tabular-nums;color:#294d85;font-size:14px}
+.timeline input{flex:1;accent-color:#3974db;cursor:pointer}
+#timeEnd{width:58px;text-align:right;color:var(--muted);font-size:12px}
+.metrics{height:57px;display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-top:3px}
+.metric{background:#f2f6fc;padding:8px 12px;border-radius:9px}.metric .caption{font-size:11px;color:#617590}.metric .value{font-size:18px;font-weight:800;white-space:nowrap;margin-top:3px;font-variant-numeric:tabular-nums}
+.bottom{min-height:0;display:grid;grid-template-columns:1.1fr .9fr;gap:13px}
+.graph-panel,.result-panel{padding:14px 16px;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+#graph{width:100%;height:208px;display:block;flex:none;border-radius:8px;background:#fbfdff}
+.legend{display:flex;gap:15px;align-items:center;margin-top:4px;color:#617590;font-size:10px}.legend i{display:inline-block;height:9px;width:9px;border-radius:10px;margin-right:5px}
+.result-top{min-height:0;margin:6px 0 9px}.result-top strong{font-size:16px;color:#0d8058}.result-top .dim{font-size:12px;color:#5c7591;line-height:1.4;margin-top:4px}
+.math{font-family:Consolas,'Courier New',monospace;font-size:14px;line-height:1.63;background:#122742;color:#eef6ff;border-radius:10px;padding:12px 14px;flex:1;white-space:pre-wrap;overflow:hidden}
+.foot{height:32px;padding:0 24px;display:flex;align-items:center;justify-content:space-between;color:#6480a0;font-size:11px}
+footer strong{color:#334e6e}
+</style>
+</head>
+<body>
+<div id="viewport"><div id="app">
+<header>
+  <div class="brand"><div class="logo">🚙</div><div><h1>Hai xe chuyển động trên đường thẳng</h1><p>NKPdf · Chuyển động thẳng đều / biến đổi đều · Hệ tọa độ cố định</p></div></div>
+  <div class="tag">MÔ PHỎNG TƯƠNG TÁC · KHUNG 16:9</div>
+</header>
+<div class="body">
+  <aside>
+    <section class="card pad">
+      <div class="section-head"><h2>01. CHỌN TÌNH HUỐNG</h2><span class="section-hint">Đơn vị SI</span></div>
+      <div class="field"><label for="preset">Hướng chuyển động ban đầu</label>
+        <select id="preset"><option value="toward">Ngược chiều – tiến lại gặp nhau</option><option value="chase">Cùng chiều – xe sau đuổi xe trước</option><option value="away">Ngược chiều – đi xa nhau</option><option value="left">Cùng chiều về bên trái</option><option value="manual">Tùy chỉnh vận tốc / vị trí</option></select></div>
+      <div class="field space"><label for="motion">Dạng chuyển động</label><select id="motion"><option value="uniform">Cả hai xe thẳng đều (a = 0)</option><option value="accelerated">Cả hai xe biến đổi đều</option><option value="mixed">Xe đỏ biến đổi đều, xe xanh thẳng đều</option><option value="manual">Gia tốc tùy chỉnh</option></select></div>
+    </section>
+    <section class="card compact">
+      <div class="section-head"><h2>02. VỊ TRÍ XUẤT PHÁT</h2><span class="section-hint">Mốc đứng yên</span></div>
+      <div class="grid2"><div class="field"><label for="x1">A (m) · xe đỏ</label><input id="x1" type="number" step="1" value="0"></div><div class="field"><label for="x2">B (m) · xe xanh</label><input id="x2" type="number" step="1" value="100"></div></div>
+      <p class="note"><strong id="ab">AB = 100 m</strong> · Kéo biển A/B trước khi chạy để đổi vị trí. Biển mốc không chuyển động.</p>
+    </section>
+    <section class="card pad">
+      <div class="section-head"><h2>03. THAM SỐ HAI XE</h2><span class="section-hint">Có thể nhập số âm</span></div>
+      <div class="grid2">
+        <div><div class="car-chip red"><i class="chipdot" style="background:#e85258"></i> XE ĐỎ ①</div><div class="field space"><label for="v1">Vận tốc đầu v₀₁ (m/s)</label><input id="v1" type="number" step="1" value="12"></div><div class="field space"><label for="a1">Gia tốc a₁ (m/s²)</label><input id="a1" type="number" step="0.5" value="0"></div></div>
+        <div><div class="car-chip blue"><i class="chipdot" style="background:#3284df"></i> XE XANH ②</div><div class="field space"><label for="v2">Vận tốc đầu v₀₂ (m/s)</label><input id="v2" type="number" step="1" value="-8"></div><div class="field space"><label for="a2">Gia tốc a₂ (m/s²)</label><input id="a2" type="number" step="0.5" value="0"></div></div>
+      </div>
+      <p class="note">Quy ước: chiều dương sang phải (→). Vận tốc âm: đi sang trái (←). Gia tốc có dấu theo trục x, không nhất thiết cùng chiều vận tốc.</p>
+    </section>
+    <section class="card pad">
+      <div class="section-head"><h2>04. ĐIỀU KHIỂN</h2></div>
+      <div class="grid2"><div class="field"><label for="tmax">Thời gian tối đa (s)</label><input id="tmax" type="number" min="1" max="300" step="1" value="20"></div><div class="field"><label for="speed">Tốc độ mô phỏng</label><select id="speed"><option value="0.25">0,25×</option><option value="0.5">0,5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="5">5×</option><option value="10">10×</option></select></div></div>
+      <div class="controls space"><button class="primary" id="play">▶ Chạy xe</button><button id="restart">↺ Đặt về A, B</button><button id="meet" class="green">◎ Đến lúc gặp</button></div>
+      <label class="checkrow"><input type="checkbox" id="autoStop" checked> Tự dừng đúng thời điểm gặp nhau</label>
+    </section>
+    <div class="tip">💡 <b>Chú ý:</b> Hai xe chạy trên hai làn hiển thị để dễ phân biệt, nhưng được xét là hai chất điểm chuyển động trên <b>cùng một trục x</b>.</div>
+  </aside>
+  <main>
+    <section class="card road-panel">
+      <div class="panel-heading"><h2>MÔ PHỎNG TRỰC QUAN — XE ĐỎ & XE XANH</h2><span class="pill" id="runStatus">● Sẵn sàng</span></div>
+      <canvas id="road" width="1200" height="330" aria-label="Hai chiếc xe chạy còn biển mốc A và B đứng yên"></canvas>
+      <div class="timeline"><span class="timecode" id="timeLabel">t = 0,00 s</span><input id="scrub" type="range" min="0" max="20" step="0.01" value="0" aria-label="Kéo tua thời gian"><span id="timeEnd">20 s</span></div>
+      <div class="metrics"><div class="metric"><div class="caption">Xe đỏ x₁</div><div class="value red" id="outX1">0 m</div></div><div class="metric"><div class="caption">Xe xanh x₂</div><div class="value blue" id="outX2">100 m</div></div><div class="metric"><div class="caption">Khoảng cách giữa xe</div><div class="value" id="outGap">100 m</div></div><div class="metric"><div class="caption">Vận tốc hiện thời (đỏ / xanh)</div><div class="value" id="outVel">12 / −8</div></div></div>
+    </section>
+    <div class="bottom">
+      <section class="card graph-panel"><div class="panel-heading"><h2>ĐỒ THỊ TỌA ĐỘ – THỜI GIAN</h2><span class="section-hint">x (m) theo t (s)</span></div><canvas id="graph" width="650" height="235"></canvas><div class="legend"><span><i style="background:#e85258"></i> Xe đỏ x₁(t)</span><span><i style="background:#3284df"></i> Xe xanh x₂(t)</span><span><i style="background:#16a579"></i> Điểm gặp</span></div></section>
+      <section class="card result-panel"><div class="panel-heading"><h2>PHƯƠNG TRÌNH & KẾT QUẢ</h2><span class="section-hint">Chỉ xét t ≥ 0</span></div><div class="result-top"><strong id="answer">Hai xe gặp nhau sau 5 s</strong><div class="dim" id="answerDetail">Vị trí gặp tính từ gốc O: x = 60 m.</div></div><div class="math" id="eq">x₁(t) = 12t\nx₂(t) = 100 − 8t</div></section>
+    </div>
+  </main>
+</div>
+<footer class="foot"><span><strong>A & B là biển mốc cố định</strong> · Chỉ 2 xe di chuyển · Mô phỏng offline cho NKPdf</span><span>Nhấn F11 để trình chiếu toàn màn hình • 16:9</span></footer>
+</div></div>
+<script>
+(()=>{
+'use strict';
+const $=id=>document.getElementById(id), FIELD=['x1','x2','v1','v2','a1','a2','tmax'];
+const stage=$('viewport'),app=$('app'),road=$('road'),graph=$('graph');
+const ctx=road.getContext('2d'),gc=graph.getContext('2d');
+let time=0,playing=false,lastFrame=null,drag=null,view=null,lastConfig='';
+const number=id=>{let x=Number($(id).value);return Number.isFinite(x)?x:0};
+const data=()=>{let p=Object.fromEntries(FIELD.map(k=>[k,number(k)]));p.tmax=Math.max(1,Math.min(300,p.tmax||20));return p};
+const position=(p,i,t)=>p['x'+i]+p['v'+i]*t+0.5*p['a'+i]*t*t;
+const velocity=(p,i,t)=>p['v'+i]+p['a'+i]*t;
+const f=(x,n=2)=>{if(!Number.isFinite(x))return '—';return (Math.abs(x)<1e-8?0:x).toLocaleString('vi-VN',{minimumFractionDigits:0,maximumFractionDigits:n})};
+function resize(){const s=Math.min(innerWidth/1600,innerHeight/900);stage.style.width=(1600*s)+'px';stage.style.height=(900*s)+'px';app.style.transform=`scale(${s})`}
+addEventListener('resize',resize);resize();
+function meetingRoots(p){const A=(p.a1-p.a2)/2,B=p.v1-p.v2,C=p.x1-p.x2,E=1e-9;
+ if(Math.abs(A)<E){if(Math.abs(B)<E)return {all:Math.abs(C)<E,roots:[]};const root=-C/B;return {all:false,roots:root>=-E?[Math.max(0,root)]:[]}}
+ let D=B*B-4*A*C;if(D< -E)return {all:false,roots:[]};D=Math.max(0,D);let sq=Math.sqrt(D),r1=(-B-sq)/(2*A),r2=(-B+sq)/(2*A);return {all:false,roots:[r1,r2].filter(q=>Number.isFinite(q)&&q>=-E).map(q=>Math.max(0,q)).sort((a,b)=>a-b).filter((q,i,a)=>i===0||Math.abs(q-a[i-1])>1e-7)}
+}
+// The world-to-pixel transform is calculated only when PARAMETERS change.
+// During simulation, A and B ALWAYS keep precisely the same screen pixels.
+function computeView(p){const r=meetingRoots(p);let focus=r.roots.length?Math.min(p.tmax,Math.max(3,r.roots[0]*1.42)):Math.min(p.tmax,6),xs=[p.x1,p.x2];
+ for(let i=1;i<=2;i++){xs.push(position(p,i,focus));let a=p['a'+i],turn=-p['v'+i]/a;if(Math.abs(a)>1e-9&&turn>0&&turn<focus)xs.push(position(p,i,turn))}
+ let lo=Math.min(...xs),hi=Math.max(...xs);const span=Math.max(40,hi-lo);const gap=span*.18+8;lo-=gap;hi+=gap;
+ return {lo,hi,left:95,right:road.width-95,x:value=>95+(value-lo)/(hi-lo)*(road.width-190),real:px=>lo+(px-95)/(road.width-190)*(hi-lo)}
+}
+function line(c,x,y,xx,yy,color,width=1,dash=[]){c.save();c.strokeStyle=color;c.lineWidth=width;c.setLineDash(dash);c.beginPath();c.moveTo(x,y);c.lineTo(xx,yy);c.stroke();c.restore()}
+function label(c,s,x,y,color='#425976',size=16,align='center',weight='600'){c.save();c.font=`${weight} ${size}px 'Segoe UI',Arial,sans-serif`;c.fillStyle=color;c.textAlign=align;c.fillText(s,x,y);c.restore()}
+function round(c,x,y,w,h,r,fill,stroke,sw=1){c.beginPath();c.roundRect(x,y,w,h,r);if(fill){c.fillStyle=fill;c.fill()}if(stroke){c.lineWidth=sw;c.strokeStyle=stroke;c.stroke()}}
+function arrow(c,x,y,dir,color){if(dir===0)return;c.save();c.translate(x,y);c.scale(dir,1);line(c,-27,0,24,0,color,4);c.fillStyle=color;c.beginPath();c.moveTo(24,0);c.lineTo(11,-10);c.lineTo(11,10);c.fill();c.restore()}
+function drawCar(c,x,cy,color,i,vi){
+ // A fully drawn vehicle; this object follows x_i(t), not the A or B signs.
+ const d=Math.abs(vi)>1e-6?Math.sign(vi):Math.sign(data()['v'+i]||1);
+ c.save();c.translate(x,cy);c.scale(d,1);const rot=time*vi*0.5;
+ // vehicle shadow
+ c.fillStyle='#15283f44';c.beginPath();c.ellipse(0,30,50,7,0,0,Math.PI*2);c.fill();
+ // lights, hood and cabin
+ round(c,-54,-13,108,38,9,color,'#163e68',1);
+ c.fillStyle='#eef8ff';c.fillRect(48,-4,5,9);c.fillStyle='#ffdb77';c.fillRect(48,-10,5,7);
+ c.fillStyle=color;c.beginPath();c.moveTo(-30,-13);c.lineTo(-20,-38);c.quadraticCurveTo(-18,-43,-10,-43);c.lineTo(25,-43);c.quadraticCurveTo(31,-43,34,-37);c.lineTo(44,-13);c.closePath();c.fill();
+ round(c,-17,-35,18,19,3,'#d0efff','#d0eaff',1);round(c,5,-35,20,19,3,'#d0efff','#d0eaff',1);
+ line(c,2,-34,2,-16,'#41719a',2);
+ for(let wheel of [-30,33]){c.save();c.translate(wheel,23);c.fillStyle='#202d3e';c.beginPath();c.arc(0,0,13,0,Math.PI*2);c.fill();c.fillStyle='#e2ebf7';c.beginPath();c.arc(0,0,6,0,Math.PI*2);c.fill();c.rotate(rot);line(c,-5,0,5,0,'#8192a9',2);line(c,0,-5,0,5,'#8192a9',2);c.restore()}
+ c.restore();
+ label(c,'XE '+i,x,cy-58,color,18,'center','800');
+ arrow(c,x,cy-83,d,color);
+}
+function renderRoad(p,r){let w=road.width,h=road.height;ctx.clearRect(0,0,w,h);
+ const sky=ctx.createLinearGradient(0,0,0,120);sky.addColorStop(0,'#ddf1ff');sky.addColorStop(1,'#f2fbff');ctx.fillStyle=sky;ctx.fillRect(0,0,w,118);
+ ctx.fillStyle='#cae5c0';ctx.fillRect(0,118,w,h-118);
+ // static scenery and tick marks, all in unchanging world coordinates
+ for(let j=0;j<10;j++){let xx=50+j*125;ctx.fillStyle=j%2?'#a5cd9e':'#b5d7ae';ctx.beginPath();ctx.arc(xx,116,19,Math.PI,0);ctx.fill()}
+ round(ctx,0,133,w,171,0,'#465365');line(ctx,0,135,w,135,'#cbd3e2',3);line(ctx,0,303,w,303,'#cbd3e2',3);
+ for(let x=-20;x<w+50;x+=100)round(ctx,x,216,56,4,1,'#f4cb65');
+ label(ctx,'CHIỀU DƯƠNG x →',w-23,25,'#425e7d',14,'right','800');
+ // scale labels, painted on roadside. They do not animate.
+ let step=Math.pow(10,Math.floor(Math.log10(Math.max(1,(view.hi-view.lo)/8))));if((view.hi-view.lo)/step>13)step*=2;if((view.hi-view.lo)/step>13)step*=2.5;
+ let count=0;for(let x=Math.ceil(view.lo/step)*step;x<=view.hi&&count<30;x+=step,count++){let px=view.x(x);line(ctx,px,306,px,315,'#456080',1.5);label(ctx,f(x,1),px,329,'#506781',12)}
+ // fixed stationary signposts, never computed from current car positions
+ for(let i=1;i<=2;i++){
+   const x0=p['x'+i],xx=view.x(x0),clr=i===1?'#e85258':'#3284df',letter=i===1?'A':'B';
+   line(ctx,xx,65,xx,300,clr+'99',2,[7,7]);
+   round(ctx,xx-42,29,84,37,9,'#ffffff',clr,3);
+   label(ctx,letter+' : '+f(x0,1)+' m',xx,53,clr,15,'center','800');
+   ctx.fillStyle=clr;ctx.beginPath();ctx.arc(xx,136,5,0,Math.PI*2);ctx.fill();
+ }
+ // Two cars are independent objects, positioned at calculated x_1(t) and x_2(t).
+ for(let i=1;i<=2;i++){
+   let xx=view.x(position(p,i,time)),cy=i===1?185:272,clr=i===1?'#e85258':'#3284df';
+   if(xx>=-75&&xx<=w+75)drawCar(ctx,xx,cy,clr,i,velocity(p,i,time));
+   if(xx<0||xx>w){label(ctx,'XE '+i+' → ngoài khung',Math.min(w-105,Math.max(105,xx)),cy-60,clr,14)}
+ }
+ // highlight physical meeting point at the current moment, not the initial markers
+ if(!r.all&&r.roots.some(rt=>Math.abs(time-rt)<0.025)){
+   const xx=view.x(position(p,1,time));line(ctx,xx,116,xx,298,'#13ad7e',5,[10,8]);round(ctx,xx-68,86,136,27,13,'#dbfaeb','#10a878',1);label(ctx,'HAI XE GẶP NHAU',xx,104,'#0e815d',12,'center','800');
+ }
+}
+function drawGraph(p,r){let c=gc,w=graph.width,h=graph.height;let left=57,right=w-18,top=16,bottom=h-38,all=[];let tmax=p.tmax;
+ for(let j=0;j<=180;j++){let t=tmax*j/180;all.push(position(p,1,t),position(p,2,t))}
+ let mn=Math.min(...all),mx=Math.max(...all),rng=Math.max(10,mx-mn);mn-=rng*.10;mx+=rng*.10;
+ let X=tt=>left+tt/tmax*(right-left),Y=x=>bottom-(x-mn)/(mx-mn)*(bottom-top);
+ c.clearRect(0,0,w,h);c.fillStyle='#fbfdff';c.fillRect(0,0,w,h);
+ for(let j=0;j<=4;j++){let y=top+(bottom-top)*j/4;line(c,left,y,right,y,'#e2ebf6');label(c,f(mx-(mx-mn)*j/4,0),left-8,y+4,'#6b82a0',11,'right','500')}
+ for(let j=0;j<=8;j++){let x=X(tmax*j/8);line(c,x,top,x,bottom,'#e4ecf6');label(c,f(tmax*j/8,1),x,bottom+16,'#6b82a0',11,'center','500')}
+ for(let i=1;i<=2;i++){c.save();c.beginPath();c.strokeStyle=i===1?'#e85258':'#3284df';c.lineWidth=3.1;for(let j=0;j<=240;j++){let tt=tmax*j/240,x=X(tt),y=Y(position(p,i,tt));if(j===0)c.moveTo(x,y);else c.lineTo(x,y)}c.stroke();c.fillStyle=c.strokeStyle;c.beginPath();c.arc(X(time),Y(position(p,i,time)),5,0,2*Math.PI);c.fill();c.restore()}
+ for(let rt of r.roots){if(rt>tmax+1e-8)continue;let x=X(rt),y=Y(position(p,1,rt));c.fillStyle='#0b9d74';c.beginPath();c.arc(x,y,6,0,Math.PI*2);c.fill();label(c,'Gặp: '+f(rt,2)+' s',Math.max(left+44,Math.min(right-48,x)),Math.max(top+12,y-12),'#0a9470',12)}
+ line(c,X(time),top,X(time),bottom,'#8b9eb9',1.5,[5,5]);label(c,'t (s)',right,bottom+32,'#607d99',12,'right');label(c,'x (m)',left,12,'#607d99',12,'left')
+}
+function formatTerm(v,suffix){if(Math.abs(v)<1e-9)return '';return (v>0?' + ':' − ')+f(Math.abs(v),3)+suffix}
+function equation(p){let x1=`x₁(t) = ${f(p.x1,3)}${formatTerm(p.v1,'t')}${formatTerm(p.a1/2,'t²')}`;
+ let x2=`x₂(t) = ${f(p.x2,3)}${formatTerm(p.v2,'t')}${formatTerm(p.a2/2,'t²')}`;
+ let A=(p.a1-p.a2)/2,B=p.v1-p.v2,C=p.x1-p.x2;
+ return `${x1}\n${x2}\n\nGặp nhau ⇔ x₁(t) = x₂(t)\n${f(A,3)}t²${formatTerm(B,'t')}${formatTerm(C,'')} = 0`;
+}
+function setAnswer(p,r){let title=$('answer'),detail=$('answerDetail');
+ if(r.all){title.textContent='Hai xe trùng nhau tại mọi thời điểm';detail.textContent='Cả hai có cùng vị trí, vận tốc đầu và gia tốc.'}
+ else if(!r.roots.length){title.textContent='Hai xe không gặp nhau với t ≥ 0';detail.textContent='Với bộ tham số hiện tại, phương trình không có nghiệm không âm.'}
+ else{let first=r.roots[0];if(r.roots.some(rt=>Math.abs(time-rt)<0.025))title.textContent='✓ HAI XE ĐANG GẶP NHAU';else title.textContent=r.roots.length>1?'Hai xe có thể gặp nhau 2 lần':'Hai xe gặp nhau sau '+f(first,3)+' s';detail.textContent=r.roots.map((rt,i)=>`${r.roots.length>1?'Lần '+(i+1)+': ':''}t = ${f(rt,3)} s, x = ${f(position(p,1,rt),3)} m`).join(' · ')}
+ $('eq').textContent=equation(p)
+}
+function render(){let p=data(),r=meetingRoots(p);if(!view)view=computeView(p);
+ time=Math.max(0,Math.min(time,p.tmax));$('timeLabel').textContent='t = '+f(time,2)+' s';$('timeEnd').textContent=f(p.tmax)+' s';$('scrub').max=String(p.tmax);$('scrub').value=String(time);
+ $('ab').textContent='AB = '+f(Math.abs(p.x2-p.x1),2)+' m';$('outX1').textContent=f(position(p,1,time),2)+' m';$('outX2').textContent=f(position(p,2,time),2)+' m';$('outGap').textContent=f(Math.abs(position(p,1,time)-position(p,2,time)),2)+' m';$('outVel').textContent=f(velocity(p,1,time),1)+' / '+f(velocity(p,2,time),1)+' m/s';
+ $('play').textContent=playing?'⏸ Tạm dừng':'▶ Chạy xe';$('meet').disabled=!r.roots.length;
+ const status=$('runStatus');if(playing){status.textContent='▶ Đang chạy';status.style.color='#285eb4';status.style.background='#e5efff'}else if(r.roots.some(rt=>Math.abs(time-rt)<0.025)&&time>0){status.textContent='✓ Đã gặp nhau';status.style.color='#10815a';status.style.background='#e5f8ed'}else{status.textContent='● Sẵn sàng / tạm dừng';status.style.color='#147d5b';status.style.background='#e6f7ef'}
+ renderRoad(p,r);drawGraph(p,r);setAnswer(p,r)
+}
+function newConfiguration(){playing=false;lastFrame=null;time=0;view=computeView(data());render()}
+function preset(){const mode=$('preset').value;if(mode==='toward'){$('x1').value=0;$('x2').value=100;$('v1').value=12;$('v2').value=-8}
+ else if(mode==='chase'){$('x1').value=0;$('x2').value=100;$('v1').value=22;$('v2').value=10}
+ else if(mode==='away'){$('x1').value=0;$('x2').value=100;$('v1').value=-10;$('v2').value=12}
+ else if(mode==='left'){$('x1').value=0;$('x2').value=100;$('v1').value=-10;$('v2').value=-20}
+ applyMotion(false);newConfiguration()}
+function applyMotion(change=true){const mode=$('motion').value;if(mode==='uniform'){$('a1').value=0;$('a2').value=0}
+ else if(mode==='accelerated'){$('a1').value=2;$('a2').value=-1}
+ else if(mode==='mixed'){$('a1').value=2;$('a2').value=0}
+ if(change)newConfiguration()}
+$('preset').addEventListener('change',preset);$('motion').addEventListener('change',()=>applyMotion());
+FIELD.forEach(k=>$(k).addEventListener('input',()=>{if(['v1','v2','x1','x2'].includes(k))$('preset').value='manual';if(['a1','a2'].includes(k))$('motion').value='manual';newConfiguration()}));
+$('play').addEventListener('click',()=>{let p=data();if(time>=p.tmax-1e-8)time=0;playing=!playing;lastFrame=null;render()});
+$('restart').addEventListener('click',()=>{playing=false;time=0;lastFrame=null;render()});
+$('meet').addEventListener('click',()=>{let p=data(),r=meetingRoots(p);if(!r.roots.length)return;const tt=r.roots.find(x=>x>time+1e-7)??r.roots[0];if(tt>p.tmax){$('tmax').value=Math.min(300,Math.ceil(tt+Math.max(2,tt*.2)));view=computeView(data())}time=tt;playing=false;lastFrame=null;render()});
+$('scrub').addEventListener('input',()=>{playing=false;lastFrame=null;time=Number($('scrub').value);render()});
+function pointer(e){const rect=road.getBoundingClientRect();return {x:(e.clientX-rect.left)*(road.width/rect.width),y:(e.clientY-rect.top)*(road.height/rect.height)}}
+road.addEventListener('pointerdown',e=>{if(playing)return;const pt=pointer(e),p=data();if(pt.y<23||pt.y>82)return;const ds=[Math.abs(pt.x-view.x(p.x1)),Math.abs(pt.x-view.x(p.x2))];let min=Math.min(...ds);if(min>48)return;drag={key:ds[0]<=ds[1]?'x1':'x2',map:view};road.setPointerCapture(e.pointerId);road.classList.add('dragging');time=0});
+road.addEventListener('pointermove',e=>{if(!drag)return;const pt=pointer(e);let x=Math.round(drag.map.real(pt.x));$(drag.key).value=x;$('preset').value='manual';render()});
+function finishDrag(){if(drag){drag=null;road.classList.remove('dragging');newConfiguration()}}
+road.addEventListener('pointerup',finishDrag);road.addEventListener('pointercancel',finishDrag);
+function frame(now){if(playing){const p=data(),r=meetingRoots(p);if(lastFrame!==null){let dt=Math.min((now-lastFrame)/1000,.09)*number('speed');let next=Math.min(p.tmax,time+dt);if($('autoStop').checked){let meet=r.roots.find(rt=>rt>time+1e-8&&rt<=next+1e-8);if(meet!==undefined){next=meet;playing=false}}time=next;if(time>=p.tmax)playing=false;render()}lastFrame=now}else lastFrame=null;requestAnimationFrame(frame)}
+requestAnimationFrame(frame);
+// Public API for future embedding in NKPdf QWebEngineView.
+window.NKPDF_TWO_CARS={getState:()=>({time,playing,params:data(),view:{lo:view.lo,hi:view.hi}}),setTime:(seconds)=>{playing=false;time=Math.max(0,Number(seconds)||0);render()},play:()=>{playing=true;lastFrame=null;render()},pause:()=>{playing=false;render()},reset:()=>{time=0;playing=false;render()}};
+newConfiguration();
+})();
+</script>
+</body>
+</html>

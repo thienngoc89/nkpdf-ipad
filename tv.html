@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>NKPDF 2.9 — Màn hình Trình chiếu TV 16:9 (Không công cụ)</title>
+  <script src="./vendor/mqtt.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: #0B192C;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: "Be Vietnam Pro", "Segoe UI", -apple-system, sans-serif;
+    }
+    #tv-stage {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      display: block;
+      background: #FFFFFF;
+    }
+    #tv-stage.hidden { display: none; }
+    #tv-waiting {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      background: radial-gradient(circle at center, #0F3D5E 0%, #091B2C 100%);
+      color: #F8FAFC;
+      text-align: center;
+      padding: 28px;
+    }
+    #tv-waiting.hidden { display: none; }
+    #tv-waiting h1 { font-size: 28px; color: #FDE047; }
+    #tv-waiting p { font-size: 16px; color: #CBD5E1; max-width: 720px; line-height: 1.55; }
+    .code-box {
+      background: rgba(255, 255, 255, 0.1);
+      border: 2px solid #38BDF8;
+      border-radius: 18px;
+      padding: 16px 36px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      min-width: 420px;
+    }
+    .code-box span { font-size: 13px; color: #93C5FD; text-transform: uppercase; letter-spacing: 1px; }
+    #tv-room-code {
+      font-size: 56px;
+      font-weight: 900;
+      letter-spacing: 10px;
+      color: #FFFFFF;
+      font-family: monospace;
+    }
+    #tv-status { font-size: 15px; color: #34D399; font-weight: 700; margin-top: 2px; }
+    #tv-broker-detail {
+      font-size: 12.5px;
+      color: #E2E8F0;
+      background: rgba(15, 23, 42, 0.55);
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      border-radius: 8px;
+      padding: 6px 12px;
+      margin-top: 4px;
+      max-width: 640px;
+      word-break: break-word;
+    }
+    /* Banner chữ vàng lớn khi nhận lệnh TEST từ iPad */
+    #tv-test-banner {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      background: rgba(9, 27, 44, 0.94);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      text-align: center;
+      padding: 24px;
+    }
+    #tv-test-banner.hidden { display: none; }
+    #tv-test-title {
+      font-size: 54px;
+      font-weight: 900;
+      color: #FACC15;
+      text-shadow: 0 4px 24px rgba(250, 204, 21, 0.45);
+      letter-spacing: 2px;
+    }
+    #tv-test-sub {
+      font-size: 20px;
+      color: #34D399;
+      font-weight: 700;
+    }
+    #tv-fs-btn {
+      position: fixed;
+      bottom: 14px;
+      right: 16px;
+      z-index: 20;
+      background: rgba(15, 23, 42, 0.62);
+      color: #F8FAFC;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 999px;
+      padding: 6px 14px;
+      font-size: 12.5px;
+      font-weight: 700;
+      cursor: pointer;
+      opacity: 0.65;
+      transition: opacity 0.15s;
+    }
+    #tv-fs-btn:hover { opacity: 1; }
+    #tv-back-btn {
+      position: fixed;
+      top: 18px;
+      left: 16px;
+      z-index: 30;
+      background: rgba(220, 38, 38, 0.88);
+      color: #FFFFFF;
+      border: 1.5px solid #FCA5A5;
+      border-radius: 999px;
+      padding: 7px 14px;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+      opacity: 0.72;
+    }
+    #tv-back-btn:hover { opacity: 1; }
+  </style>
+</head>
+<body>
+  <canvas id="tv-stage" class="hidden"></canvas>
+
+  <div id="tv-test-banner" class="hidden">
+    <div id="tv-test-title">NKPDF — KẾT NỐI THÀNH CÔNG</div>
+    <div id="tv-test-sub">✅ Đã nhận tín hiệu TEST từ iPad &amp; gửi phản hồi ACK hai chiều!</div>
+  </div>
+
+  <div id="tv-waiting">
+    <h1>📺 NKPDF 2.9 — MÀN HÌNH TRÌNH CHIẾU TV 16:9</h1>
+    <div class="code-box">
+      <span>Mã kết nối không dây cho iPad</span>
+      <div id="tv-room-code">....</div>
+      <div id="tv-status">⏳ Đang kiểm tra thư viện MQTT...</div>
+      <div id="tv-broker-detail">Đang khởi tạo...</div>
+    </div>
+    <p>Trên iPad, Thầy bấm nút <b>📺 Trình chiếu</b> → nhập <b>Mã 4 số</b> ở trên rồi bấm <b>🧪 TEST</b> hoặc <b>📡 Chiếu lên TV</b>.<br/>
+    Màn hình TV sẽ hiển thị <b>100% Full 16:9 (0% vạch đen, 0% thanh công cụ)</b>, còn trên iPad vẫn giữ nguyên đầy đủ công cụ!</p>
+  </div>
+  <button id="tv-back-btn">← Quay lại NKPDF</button>
+  <button id="tv-fs-btn">⛶ Toàn màn hình 16:9</button>
+
+  <script>
+    (function () {
+      var canvas = document.getElementById('tv-stage');
+      var ctx = canvas.getContext('2d');
+      var waiting = document.getElementById('tv-waiting');
+      var codeEl = document.getElementById('tv-room-code');
+      var statusEl = document.getElementById('tv-status');
+      var detailEl = document.getElementById('tv-broker-detail');
+      var testBanner = document.getElementById('tv-test-banner');
+      var testSub = document.getElementById('tv-test-sub');
+      var fsBtn = document.getElementById('tv-fs-btn');
+      var backBtn = document.getElementById('tv-back-btn');
+      var testHideTimer = null;
+
+      function resizeStage() {
+        var dpr = Math.min(2, window.devicePixelRatio || 1);
+        canvas.width = Math.round(window.innerWidth * dpr);
+        canvas.height = Math.round(window.innerHeight * dpr);
+      }
+      resizeStage();
+      window.addEventListener('resize', resizeStage);
+
+      function renderDataFrame(dataUrl, bg) {
+        if (!dataUrl) return;
+        if (testBanner) testBanner.classList.add('hidden');
+        waiting.classList.add('hidden');
+        canvas.classList.remove('hidden');
+        backBtn.style.opacity = '0.2';
+        var img = new Image();
+        img.onload = function () {
+          var cw = canvas.width, chH = canvas.height;
+          ctx.fillStyle = bg || '#FFFFFF';
+          ctx.fillRect(0, 0, cw, chH);
+          ctx.drawImage(img, 0, 0, cw, chH);
+        };
+        img.src = dataUrl;
+      }
+
+      function showTestSuccessOnTv(brokerName, roomCode) {
+        if (!testBanner) return;
+        testBanner.classList.remove('hidden');
+        if (testSub) {
+          testSub.textContent = '✅ Mã phòng ' + roomCode + ' • Broker: ' + brokerName + ' • Đã gửi ACK về iPad!';
+        }
+        if (testHideTimer) clearTimeout(testHideTimer);
+        testHideTimer = setTimeout(function () {
+          testBanner.classList.add('hidden');
+        }, 6000);
+      }
+
+      backBtn.addEventListener('click', function () {
+        if (window.opener && !window.opener.closed) window.close();
+        else if (window.history.length > 1) window.history.back();
+        else window.location.replace('./index.html');
+      });
+
+      fsBtn.addEventListener('click', function () {
+        if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch(function () {});
+        } else if (document.exitFullscreen) {
+          document.exitFullscreen().catch(function () {});
+        }
+      });
+
+      // 1. Tạo mã phòng 4 số
+      var roomCode = String(Math.floor(1000 + Math.random() * 9000));
+      codeEl.textContent = roomCode;
+      var topicCmd = 'nkpdf29/tv/' + roomCode;
+      var topicAck = 'nkpdf29/tv/' + roomCode + '/ack';
+
+      // 2. Kiểm tra thư viện mqtt.min.js đã tải và khởi tạo thành công chưa
+      if (!window.mqtt || typeof window.mqtt.connect !== 'function') {
+        statusEl.style.color = '#F87171';
+        statusEl.textContent = '❌ Lỗi: Thư viện mqtt.min.js chưa tải hoặc không tương thích trình duyệt TV.';
+        detailEl.textContent = 'Chi tiết: window.mqtt = ' + String(typeof window.mqtt);
+        return;
+      }
+
+      var BROKERS = [
+        { name: 'EMQX (broker.emqx.io:8084)', url: 'wss://broker.emqx.io:8084/mqtt' },
+        { name: 'HiveMQ (broker.hivemq.com:8884)', url: 'wss://broker.hivemq.com:8884/mqtt' }
+      ];
+
+      var activeClient = null;
+      var switchTimer = null;
+      var errorsLog = [];
+
+      function stopCurrentClient() {
+        if (switchTimer) {
+          clearTimeout(switchTimer);
+          switchTimer = null;
+        }
+        if (activeClient) {
+          var old = activeClient;
+          activeClient = null;
+          try { old.end(true); } catch (e) {}
+        }
+      }
+
+      function tryBroker(idx) {
+        stopCurrentClient();
+
+        if (idx >= BROKERS.length) {
+          statusEl.style.color = '#F87171';
+          statusEl.textContent = '⚠️ Không kết nối được cả 2 Broker MQTT.';
+          detailEl.textContent = 'Chi tiết lỗi: ' + (errorsLog.join(' | ') || 'Timeout') + ' — Đang tự thử lại sau 4 giây...';
+          setTimeout(function () {
+            errorsLog = [];
+            tryBroker(0);
+          }, 4000);
+          return;
+        }
+
+        var b = BROKERS[idx];
+        var clientId = 'nkpdf_tv_' + roomCode + '_' + Math.random().toString(16).slice(2, 7);
+        statusEl.style.color = '#FDE047';
+        statusEl.textContent = '⏳ Đang kết nối Broker [' + (idx + 1) + '/' + BROKERS.length + ']: ' + b.name + '...';
+        detailEl.textContent = 'URL: ' + b.url + ' | Thư viện: mqtt ' + (window.mqtt.version || 'loaded');
+
+        var connected = false;
+        var switched = false;
+
+        function failAndNext(reason) {
+          if (switched || connected) return;
+          switched = true;
+          var errMsg = b.name + ' -> ' + reason;
+          errorsLog.push(errMsg);
+          detailEl.textContent = '⚠️ Lỗi ' + errMsg + '. Đang chuyển sang Broker tiếp theo...';
+          stopCurrentClient();
+          setTimeout(function () {
+            tryBroker(idx + 1);
+          }, 300);
+        }
+
+        // Timeout độc lập 7.5 giây cho mỗi Broker
+        switchTimer = setTimeout(function () {
+          failAndNext('Quá thời gian chờ (Timeout 7.5s)');
+        }, 7500);
+
+        var client = window.mqtt.connect(b.url, {
+          clientId: clientId,
+          connectTimeout: 6800,
+          keepalive: 25
+        });
+        activeClient = client;
+
+        client.on('connect', function () {
+          if (switched) return;
+          connected = true;
+          if (switchTimer) { clearTimeout(switchTimer); switchTimer = null; }
+
+          statusEl.style.color = '#38BDF8';
+          statusEl.textContent = '⏳ Đã nối ' + b.name + ', đang đăng ký kênh nhận lệnh...';
+
+          client.subscribe(topicCmd, function (subErr) {
+            if (subErr) {
+              connected = false;
+              failAndNext('Lỗi subscribe: ' + (subErr.message || subErr));
+              return;
+            }
+            statusEl.style.color = '#34D399';
+            statusEl.textContent = '✅ SẴN SÀNG KẾT NỐI! Nhập mã ' + roomCode + ' trên iPad.';
+            detailEl.textContent = '🟢 Broker: ' + b.name + ' | Kênh: ' + topicCmd + ' (Đã Subscribe thành công)';
+          });
+        });
+
+        client.on('message', function (_t, payload) {
+          try {
+            var raw = payload ? payload.toString() : '';
+            var msg = JSON.parse(raw);
+            if (!msg) return;
+
+            if (msg.type === 'test') {
+              // 1. Hiển thị chữ vàng lớn trên TV: NKPDF — KẾT NỐI THÀNH CÔNG
+              showTestSuccessOnTv(b.name, roomCode);
+              statusEl.style.color = '#FACC15';
+              statusEl.textContent = '🌟 NKPDF — KẾT NỐI THÀNH CÔNG (Đã nhận TEST từ iPad)';
+              detailEl.textContent = '🟢 Đã gửi gói ACK xác nhận về iPad qua ' + b.name;
+              // 2. Gửi ACK về iPad
+              client.publish(topicAck, JSON.stringify({
+                type: 'ack',
+                ackFor: 'test',
+                roomCode: roomCode,
+                brokerName: b.name,
+                brokerUrl: b.url,
+                ts: Date.now()
+              }));
+            } else if (msg.type === 'ping') {
+              statusEl.style.color = '#34D399';
+              statusEl.textContent = '🔗 Đã ghép nối 2 chiều với iPad! Đang nhận hình ảnh 16:9...';
+              detailEl.textContent = '🟢 Đã gửi ACK ghép nối về iPad qua ' + b.name;
+              client.publish(topicAck, JSON.stringify({
+                type: 'ack',
+                ackFor: 'ping',
+                roomCode: roomCode,
+                brokerName: b.name,
+                brokerUrl: b.url,
+                ts: Date.now()
+              }));
+            } else if (msg.type === 'frame') {
+              renderDataFrame(msg.dataUrl, msg.bg);
+            } else if (msg.type === 'stop') {
+              waiting.classList.remove('hidden');
+              canvas.classList.add('hidden');
+              if (testBanner) testBanner.classList.add('hidden');
+              statusEl.style.color = '#34D399';
+              statusEl.textContent = '🔌 iPad đã ngắt trình chiếu. Mã phòng vẫn là ' + roomCode + '.';
+            }
+          } catch (e) {}
+        });
+
+        client.on('timeout', function (err) {
+          failAndNext('Timeout (' + (err && err.message ? err.message : 'quá hạn') + ')');
+        });
+
+        client.on('error', function (err) {
+          var msg = (err && err.message) ? err.message : 'Lỗi WebSocket/MQTT';
+          if (!connected) {
+            failAndNext(msg);
+          } else {
+            detailEl.textContent = '⚠️ Cảnh báo trên ' + b.name + ': ' + msg;
+          }
+        });
+
+        client.on('offline', function () {
+          if (!connected) {
+            failAndNext('Mất kết nối (offline)');
+          } else {
+            statusEl.style.color = '#FDE047';
+            statusEl.textContent = '⚠️ Mất kết nối tới ' + b.name + ', đang kết nối lại...';
+            connected = false;
+            tryBroker(0);
+          }
+        });
+
+        client.on('close', function () {
+          if (!connected && !switched) {
+            failAndNext('Kết nối bị đóng (close)');
+          } else if (connected && !switched) {
+            connected = false;
+            statusEl.style.color = '#FDE047';
+            statusEl.textContent = '⚠️ Kết nối ' + b.name + ' đã đóng, đang kết nối lại...';
+            setTimeout(function () { tryBroker(0); }, 1000);
+          }
+        });
+      }
+
+      tryBroker(0);
+    })();
+  </script>
+</body>
+</html>
