@@ -144,6 +144,52 @@
       opacity: 0.72;
     }
     #tv-back-btn:hover { opacity: 1; }
+    /* P3: Chế độ giả lập toàn màn hình 100vw x 100vh bằng CSS (ẩn toàn bộ thành phần thừa) */
+    body.pseudo-fs, html.pseudo-fs {
+      width: 100vw !important;
+      height: 100vh !important;
+      overflow: hidden !important;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+    body.pseudo-fs #tv-back-btn { display: none !important; }
+    body.pseudo-fs #tv-fs-btn { opacity: 0.22; }
+    body.pseudo-fs #tv-fs-btn:hover { opacity: 0.95; }
+    body.native-fs #tv-back-btn { display: none !important; }
+    body.native-fs #tv-fs-btn { opacity: 0.18; }
+    body.native-fs #tv-fs-btn:hover { opacity: 0.95; }
+    #tv-fs-toast {
+      position: fixed;
+      bottom: 58px;
+      right: 16px;
+      left: 16px;
+      max-width: 680px;
+      margin-left: auto;
+      z-index: 60;
+      background: rgba(15, 23, 42, 0.94);
+      color: #F8FAFC;
+      border: 1.5px solid #38BDF8;
+      border-radius: 14px;
+      padding: 12px 16px;
+      font-size: 13.5px;
+      line-height: 1.5;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    #tv-fs-toast.hidden { display: none; }
+    #tv-fs-toast-close {
+      background: rgba(255, 255, 255, 0.14);
+      color: #FFFFFF;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 8px;
+      padding: 4px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
   </style>
 </head>
 <body>
@@ -170,6 +216,10 @@
   </div>
   <button id="tv-back-btn">← Quay lại NKPDF</button>
   <button id="tv-fs-btn">⛶ Toàn màn hình 16:9</button>
+  <div id="tv-fs-toast" class="hidden" role="status" aria-live="polite">
+    <div id="tv-fs-toast-text" style="flex:1"></div>
+    <button id="tv-fs-toast-close" type="button">Đóng</button>
+  </div>
 
   <script>
     (function () {
@@ -421,13 +471,175 @@
         else window.location.replace('./index.html');
       });
 
+      // P3: Bộ điều khiển Toàn màn hình 16:9 trung thực (Native Fullscreen API + Fallback CSS 100vw×100vh + Hướng dẫn Samsung Tizen / Smart TV)
+      var fsToast = document.getElementById('tv-fs-toast');
+      var fsToastText = document.getElementById('tv-fs-toast-text');
+      var fsToastClose = document.getElementById('tv-fs-toast-close');
+      var fsToastTimer = null;
+      var pseudoFsActive = false;
+
+      function showFsToast(htmlMsg, durationMs) {
+        if (!fsToast || !fsToastText) return;
+        fsToastText.innerHTML = htmlMsg;
+        fsToast.classList.remove('hidden');
+        if (fsToastTimer) clearTimeout(fsToastTimer);
+        fsToastTimer = setTimeout(function () {
+          fsToast.classList.add('hidden');
+        }, durationMs || 8500);
+      }
+      if (fsToastClose) {
+        fsToastClose.addEventListener('click', function () {
+          if (fsToast) fsToast.classList.add('hidden');
+          if (fsToastTimer) { clearTimeout(fsToastTimer); fsToastTimer = null; }
+        });
+      }
+
+      function getFullscreenElement() {
+        return document.fullscreenElement ||
+          document.webkitFullscreenElement ||
+          document.mozFullScreenElement ||
+          document.msFullscreenElement ||
+          null;
+      }
+
+      function isFullscreenApiEnabled() {
+        var flag = document.fullscreenEnabled;
+        if (typeof flag === 'undefined') flag = document.webkitFullscreenEnabled;
+        if (typeof flag === 'undefined') flag = document.mozFullScreenEnabled;
+        if (typeof flag === 'undefined') flag = document.msFullscreenEnabled;
+        var el = document.documentElement;
+        var hasMethod = Boolean(
+          el.requestFullscreen ||
+          el.webkitRequestFullscreen ||
+          el.mozRequestFullScreen ||
+          el.msRequestFullscreen
+        );
+        return Boolean(hasMethod && (flag !== false));
+      }
+
+      function updateFsUi() {
+        var nativeFs = Boolean(getFullscreenElement());
+        if (nativeFs) {
+          pseudoFsActive = false;
+          document.documentElement.classList.remove('pseudo-fs');
+          document.body.classList.remove('pseudo-fs');
+          document.body.classList.add('native-fs');
+          fsBtn.textContent = '⛌ Thoát toàn màn hình';
+        } else if (pseudoFsActive) {
+          document.body.classList.remove('native-fs');
+          document.documentElement.classList.add('pseudo-fs');
+          document.body.classList.add('pseudo-fs');
+          fsBtn.textContent = '⛌ Thoát chế độ 100vw×100vh (Giả lập)';
+        } else {
+          document.body.classList.remove('native-fs');
+          document.documentElement.classList.remove('pseudo-fs');
+          document.body.classList.remove('pseudo-fs');
+          fsBtn.textContent = '⛶ Toàn màn hình 16:9';
+        }
+        resizeStage();
+      }
+
+      function enterPseudoFullscreenWithGuide(reason) {
+        pseudoFsActive = true;
+        updateFsUi();
+        var ua = navigator.userAgent || '';
+        var isTizen = /Tizen|SMART-TV|SamsungBrowser/i.test(ua);
+        var tvTip = isTizen
+          ? '<b>Trên Samsung TV (Tizen):</b> bấm nút <b>▲</b> trên điều khiển lên thanh địa chỉ trình duyệt → chọn biểu tượng <b>Toàn màn hình (⛶)</b>, hoặc mở <b>Menu/Tools → Ẩn thanh địa chỉ</b>.'
+          : '<b>Trên Smart TV / Trình duyệt hạn chế:</b> bấm <b>F11</b> (máy tính) hoặc dùng điều khiển TV chọn biểu tượng <b>Toàn màn hình / Ẩn thanh địa chỉ</b> của trình duyệt TV.';
+        showFsToast(
+          '⚠️ <b>Trình duyệt này không cho phép Fullscreen API</b> (' + reason + ').<br/>' +
+          'Đã bật chế độ <b>tối đa hóa 100vw×100vh (giả lập — ẩn nút thừa, thanh trình duyệt TV nếu có vẫn giữ nguyên)</b>.<br/>' +
+          tvTip,
+          10000
+        );
+      }
+
+      function requestNativeFullscreen() {
+        var el = document.documentElement;
+        var req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+        if (!isFullscreenApiEnabled() || !req) {
+          enterPseudoFullscreenWithGuide('Fullscreen API không khả dụng trên trình duyệt này');
+          return;
+        }
+        try {
+          var ret = req.call(el);
+          if (ret && typeof ret.then === 'function') {
+            ret.then(function () {
+              // Xác minh lại thực sự đã vào fullscreen element chưa (một số TV resolve promise nhưng không vào fullscreen)
+              setTimeout(function () {
+                if (getFullscreenElement()) {
+                  updateFsUi();
+                  showFsToast('✅ Đã bật <b>Toàn màn hình thực 16:9</b> (Fullscreen API).', 3500);
+                } else {
+                  enterPseudoFullscreenWithGuide('Trình duyệt từ chối hoặc bỏ qua yêu cầu toàn màn hình');
+                }
+              }, 120);
+            }).catch(function (err) {
+              var msg = (err && (err.message || err.name)) ? (err.name + ': ' + err.message) : 'Bị chặn bởi trình duyệt';
+              enterPseudoFullscreenWithGuide(msg);
+            });
+          } else {
+            // Trình duyệt webkit cũ không trả về Promise
+            setTimeout(function () {
+              if (getFullscreenElement()) {
+                updateFsUi();
+                showFsToast('✅ Đã bật <b>Toàn màn hình thực 16:9</b>.', 3500);
+              } else {
+                enterPseudoFullscreenWithGuide('WebKit Fullscreen không kích hoạt trên thiết bị này');
+              }
+            }, 250);
+          }
+        } catch (err) {
+          var emsg = (err && err.message) ? err.message : 'Lỗi gọi Fullscreen API';
+          enterPseudoFullscreenWithGuide(emsg);
+        }
+      }
+
+      function exitAnyFullscreen() {
+        if (getFullscreenElement()) {
+          var ex = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
+          if (ex) {
+            try {
+              var ret = ex.call(document);
+              if (ret && typeof ret.catch === 'function') ret.catch(function () {});
+            } catch (e) {}
+          }
+        }
+        if (pseudoFsActive) {
+          pseudoFsActive = false;
+          updateFsUi();
+          showFsToast('ℹ️ Đã thoát chế độ tối đa hóa 100vw×100vh (giả lập).', 2800);
+        }
+      }
+
+      ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange'].forEach(function (evName) {
+        document.addEventListener(evName, updateFsUi);
+      });
+      ['fullscreenerror', 'webkitfullscreenerror', 'mozfullscreenerror', 'MSFullscreenError'].forEach(function (evName) {
+        document.addEventListener(evName, function () {
+          enterPseudoFullscreenWithGuide('Sự kiện fullscreenerror từ trình duyệt');
+        });
+      });
+
       fsBtn.addEventListener('click', function () {
-        if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
-          document.documentElement.requestFullscreen().catch(function () {});
-        } else if (document.exitFullscreen) {
-          document.exitFullscreen().catch(function () {});
+        if (getFullscreenElement() || pseudoFsActive) {
+          exitAnyFullscreen();
+        } else {
+          requestNativeFullscreen();
         }
       });
+
+      window.__nkpdfTvFullscreen = {
+        getState: function () {
+          return {
+            apiEnabled: isFullscreenApiEnabled(),
+            isNativeFullscreen: Boolean(getFullscreenElement()),
+            isPseudoFullscreen: pseudoFsActive,
+            buttonText: fsBtn.textContent
+          };
+        }
+      };
 
       // 1. Tạo mã phòng 4 số
       var roomCode = String(Math.floor(1000 + Math.random() * 9000));
