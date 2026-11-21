@@ -21,11 +21,9 @@ targets:
     deploymentTarget: "15.0"
     sources:
       - path: Sources
-    resources:
       - path: WebAssets
         type: folder
-    info:
-      path: Resources/Info.plist
+        buildPhase: resources
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: vn.nkpdf.ipad.airplaypoc

@@ -1,0 +1,112 @@
+name: Build NKPdf AirPlay PoC (Unsigned iPad IPA)
+
+on:
+  push:
+    branches:
+      - airplay-native-poc
+  workflow_dispatch:
+
+jobs:
+  build-ios-unsigned-ipa:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log Runner, Xcode & iOS SDK Versions
+        run: |
+          echo "=== RUNNER OS ==="
+          sw_vers
+          uname -a
+          echo "=== XCODE VERSION ==="
+          xcodebuild -version
+          echo "=== AVAILABLE SDKS ==="
+          xcodebuild -showsdks
+          echo "=== DEPLOYMENT TARGET ==="
+          echo "IPHONEOS_DEPLOYMENT_TARGET=15.0 (iPadOS 15.0+ / arm64 / generic/platform=iOS)"
+
+      - name: Install XcodeGen
+        run: |
+          brew install xcodegen
+          xcodegen --version
+
+      - name: Stage NKPdf WebAssets into iOS Bundle
+        run: |
+          DEST="ios/NKPdfAirPlay/WebAssets"
+          rm -rf "$DEST"
+          mkdir -p "$DEST"
+          cp index.html app.js ink_engine.js styles.css icons_nkpdf.js airplay-tv.html manifest.json "$DEST/"
+          if [ -f sample.pdf ]; then cp sample.pdf "$DEST/"; fi
+          if [ -d vendor ]; then cp -R vendor "$DEST/"; fi
+          if [ -d icons ]; then cp -R icons "$DEST/"; fi
+          ls -la "$DEST"
+
+      - name: Generate Xcode Project
+        working-directory: ios/NKPdfAirPlay
+        run: |
+          xcodegen generate
+          ls -la NKPdfAirPlay.xcodeproj
+
+      - name: Build Real Device App (iphoneos / arm64 / Unsigned)
+        working-directory: ios/NKPdfAirPlay
+        run: |
+          mkdir -p build
+          xcodebuild \
+            -project NKPdfAirPlay.xcodeproj \
+            -scheme NKPdf \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build/DerivedData \
+            ARCHS=arm64 \
+            ONLY_ACTIVE_ARCH=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build
+
+      - name: Verify Binary Platform, WebAssets & Info.plist Scene Manifest
+        working-directory: ios/NKPdfAirPlay
+        run: |
+          APP_PATH="build/DerivedData/Build/Products/Release-iphoneos/NKPdf.app"
+          test -d "$APP_PATH"
+          test -f "$APP_PATH/NKPdf"
+          test -f "$APP_PATH/Info.plist"
+          test -f "$APP_PATH/WebAssets/index.html"
+          test -f "$APP_PATH/WebAssets/airplay-tv.html"
+          test -f "$APP_PATH/WebAssets/app.js"
+          test -f "$APP_PATH/WebAssets/ink_engine.js"
+          test -f "$APP_PATH/WebAssets/styles.css"
+          test -f "$APP_PATH/WebAssets/icons_nkpdf.js"
+          echo "=== BINARY INFO ==="
+          file "$APP_PATH/NKPdf"
+          lipo -info "$APP_PATH/NKPdf"
+          otool -l "$APP_PATH/NKPdf" | grep -A 5 -E "LC_BUILD_VERSION|LC_VERSION_MIN_IPHONEOS" || true
+          echo "=== INFO.PLIST VERSION, BUNDLE ID & SCENE MANIFEST ==="
+          /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP_PATH/Info.plist"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$APP_PATH/Info.plist"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$APP_PATH/Info.plist"
+          /usr/libexec/PlistBuddy -c "Print :MinimumOSVersion" "$APP_PATH/Info.plist"
+          /usr/libexec/PlistBuddy -c "Print :UIApplicationSceneManifest" "$APP_PATH/Info.plist"
+
+      - name: Package Unsigned IPA (Payload/NKPdf.app)
+        working-directory: ios/NKPdfAirPlay
+        run: |
+          APP_PATH="build/DerivedData/Build/Products/Release-iphoneos/NKPdf.app"
+          rm -rf build/Payload build/NKPdf-AirPlay-PoC-unsigned.ipa
+          mkdir -p build/Payload
+          cp -R "$APP_PATH" build/Payload/NKPdf.app
+          rm -rf build/Payload/NKPdf.app/_CodeSignature
+          cd build
+          zip -qry NKPdf-AirPlay-PoC-unsigned.ipa Payload
+          echo "=== IPA CONTENTS CHECK ==="
+          unzip -l NKPdf-AirPlay-PoC-unsigned.ipa | head -n 45
+          ls -lh NKPdf-AirPlay-PoC-unsigned.ipa
+
+      - name: Upload Unsigned IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NKPdf-AirPlay-PoC-unsigned
+          path: ios/NKPdfAirPlay/build/NKPdf-AirPlay-PoC-unsigned.ipa
+          if-no-files-found: error

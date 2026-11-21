@@ -24,7 +24,7 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
                 return config
             }
         }
-        if connectingSceneSession.role == .externalDisplay {
+        if connectingSceneSession.role == .windowExternalDisplay {
             let config = UISceneConfiguration(
                 name: "External Display Configuration",
                 sessionRole: connectingSceneSession.role
