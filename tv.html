@@ -196,6 +196,27 @@
       var highestStrokeId = 0;
       var hasConnectedOnce = false;
 
+      // P1: Tự kiểm tra trình duyệt TV có hỗ trợ giải mã WebP không để báo về iPad
+      var tvSupportsWebP = false;
+      (function detectWebP() {
+        try {
+          var probe = new Image();
+          probe.onload = function () { tvSupportsWebP = (probe.width === 1 && probe.height === 1); };
+          probe.onerror = function () { tvSupportsWebP = false; };
+          probe.src = 'data:image/webp;base64,UklGRh4AAABXRUJQVlA4TBEAAAAvAAAAAAfQ//73v/+BiOh/AAA=';
+        } catch (e) { tvSupportsWebP = false; }
+      })();
+
+      function getTvCapabilities() {
+        var dpr = Math.min(2, window.devicePixelRatio || 1);
+        return {
+          webp: tvSupportsWebP,
+          screenW: Math.round((window.innerWidth || 1280) * dpr),
+          screenH: Math.round((window.innerHeight || 720) * dpr),
+          dpr: dpr
+        };
+      }
+
       function resizeStage() {
         var dpr = Math.min(2, window.devicePixelRatio || 1);
         var cw = Math.max(1, Math.round(window.innerWidth * dpr));
@@ -539,6 +560,7 @@
                 roomCode: roomCode,
                 brokerName: b.name,
                 brokerUrl: b.url,
+                capabilities: getTvCapabilities(),
                 ts: Date.now()
               });
             } else if (msg.type === 'ping') {
@@ -551,6 +573,7 @@
                 roomCode: roomCode,
                 brokerName: b.name,
                 brokerUrl: b.url,
+                capabilities: getTvCapabilities(),
                 ts: Date.now()
               });
             } else if (msg.type === 'frame') {

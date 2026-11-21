@@ -3957,13 +3957,91 @@
     raw: tvMetrics
   };
 
-  // Canvas chuẩn 16:9 xuất lên TV (mọi kích cỡ iPad đều xuất đúng 16:9 không vạch đen!)
+  // Canvas chuẩn 16:9 xuất lên TV (P1: tự thích ứng 960×540 / 1280×720 / 1920×1080, ưu tiên WebP + fallback JPEG 0.85–0.92)
   const tv169Canvas = document.createElement('canvas');
-  tv169Canvas.width = 1280;
-  tv169Canvas.height = 720;
+  tv169Canvas.width = 1920;
+  tv169Canvas.height = 1080;
   const tv169Ctx = tv169Canvas.getContext('2d');
+
+  const TV_QUALITY_PRESETS = {
+    fhd: { w: 1920, h: 1080, quality: 0.88, label: '1920×1080' },
+    hd:  { w: 1280, h: 720,  quality: 0.88, label: '1280×720' },
+    sd:  { w: 960,  h: 540,  quality: 0.85, label: '960×540' }
+  };
+  let tvQualityPresetMode = 'auto'; // 'auto' | 'fhd' | 'hd' | 'sd'
+  let tvActivePresetKey = 'fhd';
   let tvEncodeMime = 'image/jpeg';
-  let tvEncodeQuality = 0.65;
+  let tvEncodeQuality = 0.88;
+  let ipadSupportsWebP = false;
+  let tvPeerSupportsWebP = false;
+  let tvSlowFrameStreak = 0;
+
+  // Kiểm tra trình duyệt iPad có hỗ trợ encode WebP qua toBlob không
+  (function detectIpadWebPEncode() {
+    try {
+      const c = document.createElement('canvas');
+      c.width = 4; c.height = 4;
+      if (typeof c.toBlob === 'function') {
+        c.toBlob((blob) => {
+          ipadSupportsWebP = Boolean(blob && blob.type === 'image/webp');
+          refreshTvCodec();
+        }, 'image/webp', 0.88);
+      }
+    } catch (_) { ipadSupportsWebP = false; }
+  })();
+
+  function refreshTvCodec() {
+    tvEncodeMime = (ipadSupportsWebP && tvPeerSupportsWebP) ? 'image/webp' : 'image/jpeg';
+  }
+
+  function applyTvPreset(key, forceSync = false) {
+    const p = TV_QUALITY_PRESETS[key] || TV_QUALITY_PRESETS.hd;
+    tvActivePresetKey = key;
+    if (tv169Canvas.width !== p.w || tv169Canvas.height !== p.h) {
+      tv169Canvas.width = p.w;
+      tv169Canvas.height = p.h;
+    }
+    tvEncodeQuality = p.quality;
+    refreshTvCodec();
+    updateTvMetricsBadge();
+    if (forceSync && tvStageActive) {
+      tvLastFrameSig = '';
+      scheduleTvFrameSync('preset_change', true);
+    }
+  }
+
+  function negotiateTvCapabilities(caps) {
+    tvPeerSupportsWebP = Boolean(caps && caps.webp);
+    refreshTvCodec();
+    if (tvQualityPresetMode === 'auto') {
+      const sw = (caps && Number(caps.screenW)) || 1920;
+      if (sw >= 1600) applyTvPreset('fhd', false);
+      else if (sw >= 1100) applyTvPreset('hd', false);
+      else applyTvPreset('sd', false);
+    } else {
+      applyTvPreset(tvQualityPresetMode, false);
+    }
+  }
+
+  function updateTvMetricsBadge() {
+    const el = document.getElementById('tv-metrics-badge');
+    if (!el) return;
+    const s = getTvMetricsSummary();
+    const fmt = s.mime === 'image/webp' ? 'WebP' : 'JPEG';
+    const dP95 = s.delta.rttMs.p95 ? ` • Bút P95: ${s.delta.rttMs.p95}ms` : '';
+    const fKB = s.frame.bytes.p50 ? ` • Frame: ${Math.round(s.frame.bytes.p50 / 1024)}KB` : '';
+    el.textContent = `${s.resolution} ${fmt} q=${s.quality}${fKB}${dP95} • ${s.bandwidthKBps}KB/s`;
+  }
+
+  const tvPresetSelect = document.getElementById('tv-quality-preset');
+  if (tvPresetSelect) {
+    tvPresetSelect.addEventListener('change', () => {
+      tvQualityPresetMode = tvPresetSelect.value || 'auto';
+      tvSlowFrameStreak = 0;
+      if (tvQualityPresetMode === 'auto') applyTvPreset('fhd', true);
+      else applyTvPreset(tvQualityPresetMode, true);
+    });
+  }
 
   function tvPublishPacket(obj) {
     const raw = JSON.stringify(obj);
@@ -4178,6 +4256,22 @@
       if (Number.isFinite(tvDecodeMs)) pushTvMetric(tvMetrics.tvDecodeMs, tvDecodeMs);
       if (Number.isFinite(tvDrawMs)) pushTvMetric(tvMetrics.tvDrawMs, tvDrawMs);
       tvInFlightMeta.delete(frameId);
+
+      // P1 Auto-downgrade: nếu chế độ 'auto' gặp mạng yếu / TV giải mã chậm liên tục -> tự hạ bậc để không làm trễ nét bút!
+      if (tvQualityPresetMode === 'auto') {
+        const isSlow = rtt > 450 || (Number.isFinite(tvDecodeMs) && tvDecodeMs > 120);
+        if (isSlow) {
+          tvSlowFrameStreak++;
+          if (tvSlowFrameStreak >= 4) {
+            tvSlowFrameStreak = 0;
+            if (tvActivePresetKey === 'fhd') applyTvPreset('hd', false);
+            else if (tvActivePresetKey === 'hd') applyTvPreset('sd', false);
+          }
+        } else {
+          tvSlowFrameStreak = 0;
+        }
+      }
+      updateTvMetricsBadge();
     }
     if (frameId === tvFrameInFlightId || frameId === 0) {
       tvFrameInFlightId = 0;
@@ -4498,6 +4592,7 @@
           if (msg.type === 'ack' && !ackReceived) {
             ackReceived = true;
             if (tvAckTimer) { clearTimeout(tvAckTimer); tvAckTimer = null; }
+            if (msg.capabilities) negotiateTvCapabilities(msg.capabilities);
             if (mode === 'test') {
               if (statusEl) {
                 statusEl.style.color = '#047857';
