@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>NKPdf AirPlay External Blackboard 16:9</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #14171A;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    #stage-16x9 {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: #14171A;
+    }
+    #tv-grid-canvas, #tv-ink-canvas, #tv-live-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      pointer-events: none;
+    }
+    #tv-grid-canvas { z-index: 1; }
+    #tv-ink-canvas { z-index: 2; }
+    #tv-live-canvas { z-index: 3; }
+  </style>
+</head>
+<body>
+  <div id="stage-16x9">
+    <canvas id="tv-grid-canvas"></canvas>
+    <canvas id="tv-ink-canvas"></canvas>
+    <canvas id="tv-live-canvas"></canvas>
+  </div>
+
+  <script src="ink_engine.js"></script>
+  <script>
+    (function () {
+      const gridCanvas = document.getElementById('tv-grid-canvas');
+      const inkCanvas = document.getElementById('tv-ink-canvas');
+      const liveCanvas = document.getElementById('tv-live-canvas');
+      const gridCtx = gridCanvas.getContext('2d');
+      const inkCtx = inkCanvas.getContext('2d');
+      const liveCtx = liveCanvas.getContext('2d');
+
+      const BG_MAP = {
+        green: '#0B6251',
+        black: '#14171A',
+        white: '#FFFFFF',
+        cream: '#FDF6E3'
+      };
+
+      let latestState = {
+        annots: [],
+        boardCam: { panX: 0, panY: 0, zoom: 1.0 },
+        boardTheme: 'black',
+        boardGridMode: 'grid',
+        showGrid: true,
+        gridStep: 20,
+        showPointDots: false,
+        showLabels: true,
+        ipadCssW: 1024,
+        ipadCssH: 768
+      };
+      let liveStroke = null;
+      let cssW = 1920;
+      let cssH = 1080;
+      let dpr = 1;
+
+      function computeViewportTransform() {
+        const cam = latestState.boardCam || { panX: 0, panY: 0, zoom: 1.0 };
+        const srcW = Math.max(1, Number(latestState.ipadCssW) || cssW);
+        const srcH = Math.max(1, Number(latestState.ipadCssH) || cssH);
+        // Isotropic scale (scaleX === scaleY) matched to iPad height so circles/grids stay 1:1
+        // while 16:9 TV naturally reveals extra horizontal blackboard space on left/right.
+        const fitScale = cssH / srcH;
+        const totalZoom = (cam.zoom || 1.0) * fitScale;
+        const centerOffsetX = (cssW - srcW * fitScale) * 0.5;
+        const tx = centerOffsetX + (cam.panX || 0) * fitScale;
+        const ty = (cam.panY || 0) * fitScale;
+        return { totalZoom, tx, ty };
+      }
+
+      function resizeCanvases() {
+        dpr = Math.min(2, window.devicePixelRatio || 1);
+        cssW = Math.max(1, window.innerWidth || 1920);
+        cssH = Math.max(1, window.innerHeight || 1080);
+        for (const c of [gridCanvas, inkCanvas, liveCanvas]) {
+          const targetW = Math.round(cssW * dpr);
+          const targetH = Math.round(cssH * dpr);
+          if (c.width !== targetW || c.height !== targetH) {
+            c.width = targetW;
+            c.height = targetH;
+          }
+        }
+        renderAll();
+      }
+
+      function renderGrid() {
+        const theme = latestState.boardTheme || 'black';
+        const bg = BG_MAP[theme] || '#14171A';
+        document.documentElement.style.background = bg;
+        document.body.style.background = bg;
+
+        gridCtx.save();
+        gridCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        gridCtx.fillStyle = bg;
+        gridCtx.fillRect(0, 0, cssW, cssH);
+
+        const gMode = latestState.boardGridMode || 'grid';
+        if (latestState.showGrid && gMode !== 'none') {
+          let subCol = 'rgba(255, 255, 255, 0.045)';
+          let mainCol = 'rgba(255, 255, 255, 0.10)';
+          if (theme === 'white') {
+            subCol = 'rgba(148, 163, 184, 0.15)';
+            mainCol = 'rgba(100, 116, 139, 0.28)';
+          } else if (theme === 'cream') {
+            subCol = 'rgba(180, 155, 110, 0.14)';
+            mainCol = 'rgba(145, 120, 75, 0.26)';
+          }
+
+          const { totalZoom, tx, ty } = computeViewportTransform();
+          const baseStep = latestState.gridStep || 20;
+          const wx0 = -tx / totalZoom;
+          const wy0 = -ty / totalZoom;
+          const wx1 = (cssW - tx) / totalZoom;
+          const wy1 = (cssH - ty) / totalZoom;
+          const iStart = Math.floor(wx0 / baseStep) - 1;
+          const iEnd = Math.ceil(wx1 / baseStep) + 1;
+          const jStart = Math.floor(wy0 / baseStep) - 1;
+          const jEnd = Math.ceil(wy1 / baseStep) + 1;
+
+          gridCtx.setTransform(dpr * totalZoom, 0, 0, dpr * totalZoom, dpr * tx, dpr * ty);
+          gridCtx.lineWidth = 0.65 / totalZoom;
+
+          if (gMode === 'dots') {
+            gridCtx.fillStyle = mainCol;
+            const r = 1.6 / totalZoom;
+            for (let i = iStart; i <= iEnd; i++) {
+              for (let j = jStart; j <= jEnd; j++) {
+                gridCtx.beginPath();
+                gridCtx.arc(i * baseStep, j * baseStep, (i % 4 === 0 && j % 4 === 0) ? r * 1.4 : r, 0, Math.PI * 2);
+                gridCtx.fill();
+              }
+            }
+          } else {
+            for (let i = iStart; i <= iEnd; i++) {
+              const x = i * baseStep;
+              gridCtx.strokeStyle = ((i % 4) + 4) % 4 === 0 ? mainCol : subCol;
+              gridCtx.beginPath();
+              gridCtx.moveTo(x, wy0);
+              gridCtx.lineTo(x, wy1);
+              gridCtx.stroke();
+            }
+            for (let j = jStart; j <= jEnd; j++) {
+              const y = j * baseStep;
+              gridCtx.strokeStyle = ((j % 4) + 4) % 4 === 0 ? mainCol : subCol;
+              gridCtx.beginPath();
+              gridCtx.moveTo(wx0, y);
+              gridCtx.lineTo(wx1, y);
+              gridCtx.stroke();
+            }
+          }
+        }
+        gridCtx.restore();
+      }
+
+      function renderCommitted() {
+        const { totalZoom, tx, ty } = computeViewportTransform();
+        inkCtx.save();
+        inkCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        inkCtx.clearRect(0, 0, cssW, cssH);
+        inkCtx.setTransform(dpr * totalZoom, 0, 0, dpr * totalZoom, dpr * tx, dpr * ty);
+        const list = Array.isArray(latestState.annots) ? latestState.annots : [];
+        for (let i = 0; i < list.length; i++) {
+          if (window.NKInkEngine && NKInkEngine.drawObject) {
+            NKInkEngine.drawObject(inkCtx, list[i], !!latestState.showPointDots, latestState.showLabels !== false);
+          }
+        }
+        inkCtx.restore();
+      }
+
+      function renderLive() {
+        const { totalZoom, tx, ty } = computeViewportTransform();
+        liveCtx.save();
+        liveCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        liveCtx.clearRect(0, 0, cssW, cssH);
+        if (liveStroke && Array.isArray(liveStroke.pts) && liveStroke.pts.length > 0) {
+          liveCtx.setTransform(dpr * totalZoom, 0, 0, dpr * totalZoom, dpr * tx, dpr * ty);
+          if (window.NKInkEngine && NKInkEngine.drawObject) {
+            NKInkEngine.drawObject(liveCtx, liveStroke, false, false);
+          }
+        }
+        liveCtx.restore();
+      }
+
+      function renderAll() {
+        renderGrid();
+        renderCommitted();
+        renderLive();
+      }
+
+      window.__nkpdfReceiveAirPlayState = function (msg) {
+        if (!msg || typeof msg !== 'object') return;
+        if (msg.type === 'live_stroke') {
+          liveStroke = msg.stroke || null;
+          renderLive();
+          return;
+        }
+        if (msg.type === 'board_snapshot') {
+          latestState = {
+            annots: Array.isArray(msg.annots) ? msg.annots : [],
+            boardCam: msg.boardCam || { panX: 0, panY: 0, zoom: 1.0 },
+            boardTheme: msg.boardTheme || 'black',
+            boardGridMode: msg.boardGridMode || 'grid',
+            showGrid: msg.showGrid !== false,
+            gridStep: msg.gridStep || 20,
+            showPointDots: !!msg.showPointDots,
+            showLabels: msg.showLabels !== false,
+            ipadCssW: msg.ipadCssW || 1024,
+            ipadCssH: msg.ipadCssH || 768
+          };
+          liveStroke = null;
+          renderAll();
+        }
+      };
+
+      window.addEventListener('resize', resizeCanvases);
+      resizeCanvases();
+
+      try {
+        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.nkpdfAirPlayTV) {
+          window.webkit.messageHandlers.nkpdfAirPlayTV.postMessage({ type: 'tv_ready' });
+        }
+      } catch (_) {}
+    })();
+  </script>
+</body>
+</html>

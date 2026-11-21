@@ -1,0 +1,47 @@
+name: NKPdfAirPlay
+options:
+  bundleIdPrefix: vn.nkpdf.ipad
+  deploymentTarget:
+    iOS: "15.0"
+  xcodeVersion: "15.0"
+settings:
+  base:
+    IPHONEOS_DEPLOYMENT_TARGET: "15.0"
+    TARGETED_DEVICE_FAMILY: "2"
+    SUPPORTS_MACCATALYST: "NO"
+    SWIFT_VERSION: "5.0"
+    CODE_SIGNING_ALLOWED: "NO"
+    CODE_SIGNING_REQUIRED: "NO"
+    CODE_SIGN_IDENTITY: ""
+    PRODUCT_NAME: "NKPdf"
+targets:
+  NKPdf:
+    type: application
+    platform: iOS
+    deploymentTarget: "15.0"
+    sources:
+      - path: Sources
+    resources:
+      - path: WebAssets
+        type: folder
+    info:
+      path: Resources/Info.plist
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: vn.nkpdf.ipad.airplaypoc
+        PRODUCT_NAME: NKPdf
+        TARGETED_DEVICE_FAMILY: "2"
+        IPHONEOS_DEPLOYMENT_TARGET: "15.0"
+        INFOPLIST_FILE: Resources/Info.plist
+        GENERATE_INFOPLIST_FILE: "NO"
+        ARCHS: arm64
+        ONLY_ACTIVE_ARCH: "NO"
+        ENABLE_BITCODE: "NO"
+        CODE_SIGNING_ALLOWED: "NO"
+        CODE_SIGNING_REQUIRED: "NO"
+        CODE_SIGN_IDENTITY: ""
+schemes:
+  NKPdf:
+    build:
+      targets:
+        NKPdf: all

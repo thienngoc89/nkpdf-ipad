@@ -299,6 +299,9 @@
     if (typeof tvVidActiveDirty !== 'undefined' && typeof tvStreamMode !== 'undefined' && tvStreamMode !== 'vector') {
       tvVidActiveDirty = true;
     }
+    if (sid === 'board' && typeof scheduleAirPlayLiveStroke === 'function') {
+      scheduleAirPlayLiveStroke(surf.previewObj || null);
+    }
   }
 
   function redrawSurface(sid) {
@@ -551,6 +554,9 @@
     ctx.restore();
     if (typeof tvVidActiveDirty !== 'undefined' && typeof tvStreamMode !== 'undefined' && tvStreamMode !== 'vector') {
       tvVidActiveDirty = true;
+    }
+    if (isBoard && typeof scheduleAirPlayBoardSnapshot === 'function') {
+      scheduleAirPlayBoardSnapshot();
     }
   }
 
@@ -1170,6 +1176,10 @@
             const fn = fPts.length;
             if (!isHl && !state.dashed && !act.scribbleState && fn >= 3) {
               drawIncrementalSegment(fPts[fn - 3], fPts[fn - 2], fPts[fn - 1], penCol, penW, false, false);
+              if (sid === 'board' && typeof scheduleAirPlayLiveStroke === 'function') {
+                surf.previewObj.points = fPts;
+                scheduleAirPlayLiveStroke(surf.previewObj);
+              }
             }
             if (typeof tvQueueStrokePoint === 'function') tvQueueStrokePoint(sid, p);
           }
@@ -5888,6 +5898,90 @@
   }
   if (connectWirelessBtn) {
     connectWirelessBtn.addEventListener('click', () => connectAndHandshakeTv('cast'));
+  }
+
+  // ============================================================================
+  // NATIVE IPADOS AIRPLAY EXTERNAL-DISPLAY BRIDGE (WKScriptMessageHandler)
+  // ============================================================================
+  let airPlaySnapRaf = 0;
+  let airPlayLiveRaf = 0;
+  let airPlayPendingLive = null;
+
+  function hasNativeAirPlay() {
+    return Boolean(window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.nkpdfAirPlay);
+  }
+
+  function emitAirPlayBoardSnapshot() {
+    if (!hasNativeAirPlay()) return;
+    const surf = surfaces['board'];
+    const payload = {
+      type: 'board_snapshot',
+      annots: state.annots['board'] || [],
+      boardCam: state.boardCam || { panX: 0, panY: 0, zoom: 1.0 },
+      boardTheme: state.boardTheme || 'black',
+      boardGridMode: state.boardGridMode || 'grid',
+      showGrid: state.showGrid !== false,
+      gridStep: state.gridStep || 20,
+      showPointDots: !!state.showPointDots,
+      showLabels: state.showLabels !== false,
+      ipadCssW: (surf && surf.cssWidth) ? surf.cssWidth : window.innerWidth,
+      ipadCssH: (surf && surf.cssHeight) ? surf.cssHeight : window.innerHeight
+    };
+    try {
+      window.webkit.messageHandlers.nkpdfAirPlay.postMessage(payload);
+    } catch (_) {}
+  }
+
+  function scheduleAirPlayBoardSnapshot() {
+    if (!hasNativeAirPlay()) return;
+    if (airPlaySnapRaf) return;
+    airPlaySnapRaf = requestAnimationFrame(() => {
+      airPlaySnapRaf = 0;
+      emitAirPlayBoardSnapshot();
+    });
+  }
+
+  function scheduleAirPlayLiveStroke(previewObj) {
+    if (!hasNativeAirPlay()) return;
+    airPlayPendingLive = previewObj ? {
+      type: previewObj.type || 'but',
+      color: previewObj.color,
+      width: previewObj.width,
+      alpha: previewObj.alpha,
+      dashed: !!previewObj.dashed,
+      pts: previewObj.points || previewObj.pts || [],
+      points: previewObj.points || previewObj.pts || [],
+      x1: previewObj.x1, y1: previewObj.y1, x2: previewObj.x2, y2: previewObj.y2,
+      cx: previewObj.cx, cy: previewObj.cy, rx: previewObj.rx, ry: previewObj.ry
+    } : null;
+    if (airPlayLiveRaf) return;
+    airPlayLiveRaf = requestAnimationFrame(() => {
+      airPlayLiveRaf = 0;
+      try {
+        window.webkit.messageHandlers.nkpdfAirPlay.postMessage({
+          type: 'live_stroke',
+          stroke: airPlayPendingLive
+        });
+      } catch (_) {}
+    });
+  }
+
+  window.__nkpdfRequestAirPlaySnapshot = emitAirPlayBoardSnapshot;
+
+  // Hook redrawSurface('board') so pan/zoom/undo/redo/erase/draw always syncs to AirPlay TV
+  const _origRedrawSurfaceForAirPlay = redrawSurface;
+  redrawSurface = function (sid) {
+    _origRedrawSurfaceForAirPlay(sid);
+    if (sid === 'board') scheduleAirPlayBoardSnapshot();
+  };
+
+  if (location.search.includes('nativeAirPlay=1')) {
+    state.boardTheme = 'black';
+    const themeSel = document.getElementById('bx-theme-select');
+    if (themeSel) themeSel.value = 'black';
+    state.bxRect = { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight, isFullscreen: true };
+    openBangXanh(true);
+    setTimeout(emitAirPlayBoardSnapshot, 120);
   }
 
   loadSampleExam();
