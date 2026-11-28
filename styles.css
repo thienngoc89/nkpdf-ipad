@@ -1,0 +1,3315 @@
+/**
+ * Bảng màu & Stylesheet chuẩn 100% NKPDF 2.9 (trích xuất từ nkpdf/theme.py & bang_xanh.py)
+ */
+:root {
+  --xanh-dam: #1F5FBF;
+  --xanh: #2F74D6;
+  --xanh-nhat: #E8F1FC;
+  --xanh-vien: #C3D6F0;
+  --nen-trang: #D9E6F6;
+  --vien-trang: #9CB7DD;
+  --chu: #1B2B45;
+  --chu-mo: #5A6E8E;
+  --vang: #F2C46D;
+  --vang-dam: #E0A93E;
+  --navy-doc: #162C46;
+  --pdf-grid-step: 16px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+  min-height: 100lvh;
+  overflow: hidden;
+  font-family: "Be Vietnam Pro", "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+  font-size: 13px;
+  color: var(--chu);
+  background: #F5F9FE;
+  display: flex;
+  flex-direction: column;
+}
+
+.sel-quick-bar {
+  position: fixed;
+  z-index: 560;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  max-width: min(440px, calc(100vw - 24px));
+  padding: 6px 8px;
+  background: rgba(15, 23, 42, 0.92);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 14px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+.sel-qbtn {
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.12);
+  color: #F8FAFC;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.sel-qbtn.is-dashed {
+  background: #F59E0B;
+  color: #0F172A;
+  border-color: #D97706;
+}
+.sel-qbtn-del {
+  background: rgba(220, 38, 38, 0.28);
+  border-color: #F87171;
+  color: #FECACA;
+}
+.sel-qbtn-more {
+  width: 28px;
+  height: 26px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  letter-spacing: 0.5px;
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.36);
+}
+.sel-more-menu {
+  position: fixed;
+  z-index: 575;
+  width: 220px;
+  background: rgba(255, 255, 255, 0.97);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(203, 213, 225, 0.9);
+  border-radius: 16px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.22);
+  padding: 8px;
+  color: #0F172A;
+}
+.sel-more-top-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  padding-bottom: 7px;
+  margin-bottom: 5px;
+  border-bottom: 1px solid #E2E8F0;
+}
+.sel-more-top-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 6px 4px;
+  border: none;
+  background: transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  color: #0F172A;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.sel-more-top-btn:hover, .sel-more-top-btn:active {
+  background: #F1F5F9;
+}
+.sel-more-top-ic {
+  font-size: 16px;
+  line-height: 1.1;
+}
+.sel-more-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: none;
+  background: transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  color: #0F172A;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+}
+.sel-more-item:hover, .sel-more-item:active {
+  background: #F1F5F9;
+}
+.sel-more-item.danger {
+  color: #DC2626;
+}
+.sel-more-sep {
+  height: 1px;
+  background: #E2E8F0;
+  margin: 4px 2px;
+}
+.hidden {
+  display: none !important;
+}
+
+/* ============================================================================
+   1. THANH TRÊN (#ThanhTren — CHỪA KHOẢNG TRỐNG AN TOÀN CHO THANH ĐỒNG HỒ / PIN IPADOS)
+   ============================================================================ */
+:root {
+  --ipad-safe-top: env(safe-area-inset-top, 0px);
+}
+@media (pointer: coarse), (display-mode: standalone) {
+  :root {
+    --ipad-safe-top: env(safe-area-inset-top, 20px);
+  }
+}
+
+#ThanhTren {
+  height: calc(36px + var(--ipad-safe-top));
+  min-height: calc(36px + var(--ipad-safe-top));
+  padding: var(--ipad-safe-top) 8px 0 8px;
+  background: linear-gradient(90deg, #1D58B4 0%, #2F7BE0 100%);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  z-index: 100;
+}
+
+.top-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.app-brand {
+  display: flex;
+  align-items: center;
+  margin-right: 2px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  cursor: pointer;
+  padding: 2px 5px;
+  border-radius: 7px;
+  transition: background 0.15s ease;
+}
+.app-brand:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+#TenApp {
+  color: #FFFFFF;
+  font-size: 15.5px;
+  font-weight: 800;
+}
+#TenAppVang {
+  color: var(--vang);
+  font-size: 15.5px;
+  font-weight: 800;
+}
+#NhanPhienBan {
+  background: rgba(255, 255, 255, 0.18);
+  color: var(--vang);
+  font-weight: 700;
+  font-size: 10.5px;
+  border-radius: 7px;
+  padding: 1px 5px;
+  margin-left: 4px;
+}
+
+#TabRibbon {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.ribbon-tab {
+  color: #DCE9FB;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  padding: 5px 11px;
+  border-radius: 7px;
+  font-weight: 600;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.12s;
+}
+.ribbon-tab:hover {
+  background: rgba(255, 255, 255, 0.18);
+  color: #FFFFFF;
+}
+.ribbon-tab.active {
+  background: var(--xanh-nhat);
+  color: var(--xanh-dam);
+  border-color: #FFFFFF;
+  font-weight: 700;
+}
+
+.top-favorites {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  touch-action: pan-x;
+  overscroll-behavior-y: none;
+  scrollbar-width: none;
+  flex: 1;
+  justify-content: flex-end;
+  height: 100%;
+}
+.top-favorites::-webkit-scrollbar {
+  display: none;
+}
+.top-dynamic-tools {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.fav-btn.fav-gear {
+  background: rgba(245, 158, 11, 0.25);
+  border-color: #F59E0B;
+  color: #FEF08A;
+  font-weight: 800;
+}
+.ribbon-dynamic-tools {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: hidden;
+  touch-action: pan-x;
+  overscroll-behavior-y: none;
+  scrollbar-width: none;
+  height: 100%;
+  padding: 0 4px;
+}
+.ribbon-dynamic-tools::-webkit-scrollbar {
+  display: none;
+}
+.ribbon-sort-fixed {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  padding-left: 5px;
+  border-left: 1px solid var(--xanh-vien);
+  flex-shrink: 0;
+}
+.rbtn-gear {
+  background: #FEF3C7 !important;
+  border: 1.5px solid #F59E0B !important;
+  color: #B45309 !important;
+  font-weight: 800 !important;
+}
+.rbtn-gear .gear-ic {
+  font-size: 15px;
+  line-height: 1;
+}
+.sort-target-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.sort-tab-btn {
+  padding: 7px 8px;
+  border-radius: 8px;
+  border: 1.5px solid #CBD5E1;
+  background: #F8FAFC;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.sort-tab-btn.active {
+  background: #0284C7;
+  color: #FFFFFF;
+  border-color: #0369A1;
+}
+
+.fav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #FFFFFF;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 7px;
+  padding: 5px 9px;
+  min-height: 30px;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.fav-btn:hover {
+  background: rgba(255, 255, 255, 0.24);
+}
+.fav-btn.active {
+  background: #FFF1D2;
+  color: #1B2B45;
+  border-color: var(--vang);
+  font-weight: 700;
+}
+.fav-btn.fav-green {
+  background: #0B6251;
+  border-color: #34D399;
+  color: #FEF08A;
+  font-weight: 700;
+}
+.fav-btn.fav-present {
+  background: linear-gradient(135deg, #7C3AED 0%, #4F46E5 100%);
+  border-color: #C4B5FD;
+  color: #FFFFFF;
+  font-weight: 700;
+}
+
+/* CHẾ ĐỘ TRÌNH CHIẾU SẠCH 100% (ẨN TOÀN BỘ THANH CÔNG CỤ ĐỂ CHIẾU LÊN TV) */
+body.presenter-mode #ThanhTren,
+body.presenter-mode #Ribbon,
+body.presenter-mode #ThanhCongCuDoc {
+  display: none !important;
+}
+body.presenter-mode #KhungDocPdf {
+  padding: 0 !important;
+  background: #FFFFFF;
+}
+body.presenter-mode .pdf-page-wrapper {
+  border: none !important;
+}
+.presenter-mini-bar {
+  position: fixed;
+  right: 12px;
+  bottom: 14px;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.72);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.32);
+}
+.pm-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.12);
+  color: #FFFFFF;
+  font-size: 15px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.pm-btn.active {
+  background: #F59E0B;
+  border-color: #FEF08A;
+}
+.pm-btn.pm-exit {
+  background: #DC2626;
+  border-color: #FCA5A5;
+  font-weight: 800;
+}
+
+/* ============================================================================
+   2. RIBBON (#Ribbon — KHÓA CUỘN DỌC 100%, ICON GỌN ĐẸP 18PX CHO IPAD)
+   ============================================================================ */
+#Ribbon {
+  height: 48px;
+  min-height: 48px;
+  max-height: 48px;
+  background: var(--xanh-nhat);
+  border-bottom: 1px solid var(--xanh-vien);
+  padding: 2px 6px;
+  overflow: hidden;
+  touch-action: pan-x;
+  overscroll-behavior-y: none;
+}
+
+.ribbon-page {
+  display: none;
+  height: 44px;
+  max-height: 44px;
+  align-items: center;
+  gap: 3px;
+  overflow: hidden;
+}
+.ribbon-page.active {
+  display: flex;
+}
+
+.ribbon-group {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  height: 44px;
+  padding: 0 5px;
+  border-right: 1px solid var(--xanh-vien);
+}
+.ribbon-group:last-child {
+  border-right: none;
+}
+
+.ribbon-buttons {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 42px;
+}
+
+.ribbon-group-title {
+  display: none;
+}
+
+.rbtn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  min-width: 43px;
+  height: 42px;
+  max-height: 42px;
+  padding: 2px 4px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  color: var(--chu);
+  font-size: 9.8px;
+  line-height: 1.1;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.rbtn:hover {
+  background: #D6E6FB;
+  border-color: #B5CDEE;
+}
+.rbtn.active {
+  background: #FFF1D2;
+  border-color: var(--vang-dam);
+  font-weight: 700;
+}
+.rbtn .ic {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 19px;
+}
+.rbtn .ic svg {
+  width: 17px;
+  height: 17px;
+}
+
+.ribbon-style-controls {
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  height: 42px;
+  padding: 0 4px;
+}
+.color-row, .width-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+}
+.c-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1.5px solid #FFFFFF;
+  box-shadow: 0 0 0 1px #94A3B8;
+  cursor: pointer;
+}
+.c-dot.active {
+  transform: scale(1.16);
+  box-shadow: 0 0 0 2px #D97706;
+}
+#custom-pen-color {
+  width: 22px;
+  height: 17px;
+  padding: 0;
+  border: 1px solid #94A3B8;
+  border-radius: 4px;
+  background: transparent;
+}
+.w-pill {
+  padding: 1px 5px;
+  border-radius: 5px;
+  border: 1px solid var(--xanh-vien);
+  background: #FFFFFF;
+  font-size: 10px;
+  line-height: 1.2;
+  cursor: pointer;
+}
+.w-pill.active {
+  background: #FFF1D2;
+  border-color: var(--vang-dam);
+  font-weight: 700;
+}
+
+/* ============================================================================
+   3. KHUNG CHÍNH (#MainContainer): THANH DỌC + NGĂN TRANG + KHUNG PDF
+   ============================================================================ */
+#MainContainer {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  position: relative;
+}
+
+/* 3A. THANH CÔNG CỤ DỌC (#ThanhCongCuDoc) */
+#ThanhCongCuDoc {
+  width: 46px;
+  min-width: 46px;
+  background: var(--navy-doc);
+  border-right: 1px solid #2A4B7C;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 5px 3px;
+  gap: 4px;
+  overflow-y: auto;
+  z-index: 40;
+}
+
+.vbar-top-green {
+  width: 36px;
+  height: 28px;
+  border-radius: 7px;
+  background: #2E7D32;
+  border: 1px solid #81C784;
+  color: #FFFFFF;
+  font-weight: 800;
+  cursor: pointer;
+}
+.vbar-gear {
+  width: 36px;
+  height: 26px;
+  border-radius: 7px;
+  background: #243F61;
+  border: 1px solid #D97706;
+  color: #FEF08A;
+  cursor: pointer;
+}
+.vbar-sep {
+  width: 28px;
+  height: 1px;
+  background: rgba(148, 163, 184, 0.28);
+  margin: 2px 0;
+}
+.vbar-btn {
+  width: 36px;
+  height: 34px;
+  min-height: 34px;
+  border-radius: 8px;
+  background: #1E3A5F;
+  border: 1px solid #3B5984;
+  color: #F8FAFC;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 15px;
+}
+.vbar-btn:hover {
+  background: #2B5282;
+  border-color: #60A5FA;
+}
+.vbar-btn.active {
+  background: #1E3A5F;
+  border: 2px solid #F59E0B;
+  box-shadow: 0 0 6px rgba(245, 158, 11, 0.45);
+}
+
+.vbar-colors {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 0;
+}
+.vc-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1.5px solid #94A3B8;
+  cursor: pointer;
+}
+.vc-dot.active {
+  transform: scale(1.22);
+  border: 2px solid #F59E0B;
+}
+
+/* 3B. NGĂN TRANG THU NHỎ (#ThanhBen) */
+#ThanhBen {
+  width: 158px;
+  min-width: 158px;
+  background: #EEF4FC;
+  border-right: 1px solid var(--xanh-vien);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+#TieuDeBen {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  font-weight: 700;
+  color: var(--xanh-dam);
+  border-bottom: 1px solid var(--xanh-vien);
+  font-size: 12px;
+}
+#TieuDeBen button {
+  background: transparent;
+  border: 1px solid var(--xanh-vien);
+  border-radius: 5px;
+  padding: 1px 6px;
+  cursor: pointer;
+  color: var(--xanh-dam);
+}
+#ThumbnailList {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.thumb-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  color: var(--chu-mo);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.thumb-item:hover {
+  background: #E0ECFB;
+}
+.thumb-item.active {
+  background: #D2E3FA;
+  color: var(--chu);
+  border-color: #8FB2E6;
+}
+.thumb-canvas {
+  background: #FFFFFF;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  border-radius: 3px;
+  max-width: 120px;
+}
+
+/* 3C. VÙNG TÀI LIỆU & TAB TÀI LIỆU */
+#VungTaiLieu {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+#ThanhTabVaTim {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #E3EDFA;
+  border-bottom: 1px solid var(--xanh-vien);
+  padding: 3px 8px 0 8px;
+  min-height: 32px;
+}
+#TabTaiLieu {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.doc-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #FFFFFF;
+  color: var(--chu);
+  padding: 5px 14px;
+  border: 1px solid var(--xanh-vien);
+  border-bottom: none;
+  border-top: 2px solid var(--xanh);
+  border-top-left-radius: 7px;
+  border-top-right-radius: 7px;
+  font-weight: 700;
+  font-size: 12px;
+}
+#btn-add-tab, #btn-sample-tab {
+  background: #D6E6FB;
+  color: var(--xanh-dam);
+  border: 1px solid #B5CDEE;
+  border-radius: 6px;
+  padding: 3px 9px;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 3px;
+}
+
+#HopTimKiem {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #FFFFFF;
+  border: 1px solid #8FB2E6;
+  border-radius: 6px;
+  padding: 2px 6px;
+  margin-bottom: 3px;
+}
+#HopTimKiem input {
+  border: none;
+  outline: none;
+  font-size: 12px;
+  width: 150px;
+  -webkit-user-select: text;
+  user-select: text;
+}
+#HopTimKiem button {
+  background: #EEF4FC;
+  border: 1px solid var(--xanh-vien);
+  border-radius: 4px;
+  padding: 1px 5px;
+  cursor: pointer;
+}
+
+/* KHUNG CUỘN TRANG PDF (#KhungDocPdf — BLOCK LAYOUT CHỐNG NHẢY TRANG TRÊN IPADOS SAFARI) */
+#KhungDocPdf {
+  position: relative;
+  flex: 1;
+  display: block;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  overflow-anchor: none;
+  background: var(--nen-trang);
+  padding: 8px;
+}
+.pull-add-pill {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 250;
+  padding: 8px 18px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.88);
+  color: #FEF08A;
+  border: 1.5px solid #F59E0B;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.28);
+  pointer-events: none;
+  white-space: nowrap;
+  transition: background 0.12s, transform 0.12s;
+}
+.pull-add-pill.pos-top {
+  top: calc(102px + var(--ipad-safe-top));
+}
+.pull-add-pill.pos-bottom {
+  bottom: 22px;
+}
+.pull-add-pill.ready {
+  background: #047857;
+  border-color: #34D399;
+  color: #FFFFFF;
+  transform: translateX(-50%) scale(1.05);
+}
+#PdfPagesHolder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: max-content;
+  min-width: 100%;
+  margin: 0 auto;
+}
+#PdfPagesHolder.two-pages-grid {
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.pdf-page-wrapper {
+  position: relative;
+  background: #FFFFFF;
+  border: 1px solid var(--vien-trang);
+  touch-action: pan-x pan-y;
+  contain: layout style paint;
+}
+
+/* 5 Chế độ đọc chuẩn NKPDF 2.9 */
+.pdf-page-wrapper.theme-cream .pdf-base-canvas {
+  filter: sepia(0.26) brightness(0.97);
+}
+.pdf-page-wrapper.theme-blue .pdf-base-canvas {
+  filter: hue-rotate(195deg) saturate(0.25) brightness(0.96);
+}
+.pdf-page-wrapper.theme-board .pdf-base-canvas {
+  filter: invert(1) hue-rotate(135deg) brightness(0.78) contrast(1.15);
+}
+.pdf-page-wrapper.theme-night .pdf-base-canvas {
+  filter: invert(0.92) hue-rotate(180deg);
+}
+
+.pdf-base-canvas {
+  display: block;
+  pointer-events: none;
+}
+/* Lưới ô ly CSS Vector cho trang PDF: tốn 0 MB bộ nhớ GPU Canvas, tùy chỉnh cỡ ô linh hoạt (--pdf-grid-step)! */
+.pdf-page-wrapper.show-css-grid::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 4;
+  background-size:
+    var(--pdf-grid-step) var(--pdf-grid-step),
+    var(--pdf-grid-step) var(--pdf-grid-step),
+    calc(var(--pdf-grid-step) * 4) calc(var(--pdf-grid-step) * 4),
+    calc(var(--pdf-grid-step) * 4) calc(var(--pdf-grid-step) * 4);
+  background-image:
+    linear-gradient(to right, rgba(148, 185, 228, 0.24) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(148, 185, 228, 0.24) 1px, transparent 1px),
+    linear-gradient(to right, rgba(118, 162, 215, 0.42) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(118, 162, 215, 0.42) 1px, transparent 1px);
+}
+.pdf-page-wrapper.show-css-grid.theme-board::before,
+.pdf-page-wrapper.show-css-grid.theme-night::before {
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(to right, rgba(255, 255, 255, 0.13) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.13) 1px, transparent 1px);
+}
+.pdf-ink-canvas, .pdf-active-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+}
+.pdf-active-canvas {
+  pointer-events: none;
+  z-index: 3;
+}
+.pdf-ink-canvas {
+  touch-action: pan-x pan-y;
+  cursor: crosshair;
+}
+.ram-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: #047857;
+  background: #D1FAE5;
+  border: 1px solid #6EE7B7;
+  border-radius: 999px;
+  padding: 2px 10px;
+  margin-bottom: 3px;
+}
+
+.vbar-dynamic-tools {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+
+/* ============================================================================
+   4. THANH TRẠNG THÁI DƯỚI CÙNG (#ThanhTrangThai — ẨN TRÊN IPAD ĐỂ TỐI ĐA KHÔNG GIAN PDF)
+   ============================================================================ */
+#ThanhTrangThai {
+  display: none !important;
+}
+#NhanThongBao {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 500;
+  color: var(--chu);
+}
+.status-controls {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.sb-btn {
+  background: #FFFFFF;
+  border: 1px solid var(--xanh-vien);
+  border-radius: 5px;
+  padding: 1px 7px;
+  font-size: 11.5px;
+  cursor: pointer;
+  color: var(--chu);
+}
+.sb-btn:hover {
+  background: #D6E6FB;
+}
+#sb-page-input {
+  width: 44px;
+  text-align: center;
+  border: 1px solid var(--xanh-vien);
+  border-radius: 5px;
+  padding: 1px 3px;
+  font-weight: 700;
+  color: var(--xanh-dam);
+  -webkit-user-select: text;
+  user-select: text;
+}
+#sb-zoom-select, #sb-reading-mode {
+  border: 1px solid var(--xanh-vien);
+  border-radius: 5px;
+  padding: 1px 6px;
+  background: #FFFFFF;
+  color: var(--chu);
+  font-size: 11.5px;
+}
+.sb-sep {
+  width: 1px;
+  height: 16px;
+  background: var(--xanh-vien);
+  margin: 0 3px;
+}
+
+/* ============================================================================
+   5. CỬA SỔ BẢNG XANH VÔ HẠN (#CuaSoBangXanh — KÉO CẠNH CO GIÃN VỪA XEM PDF VỪA VIẾT)
+   ============================================================================ */
+#CuaSoBangXanh {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  background: #0B6251;
+  border: none;
+  box-shadow: none;
+}
+#CuaSoBangXanh.bx-fullscreen {
+  position: fixed !important;
+  inset: 0 !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  height: -webkit-fill-available !important;
+  height: 100lvh !important;
+}
+#CuaSoBangXanh.bx-fullscreen #ThanhDayBangXanh {
+  height: calc(34px + env(safe-area-inset-bottom, 0px));
+  min-height: calc(34px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+#CuaSoBangXanh.bx-floating {
+  border: 1.5px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 -6px 28px rgba(0, 0, 0, 0.45);
+}
+#CuaSoBangXanh.bx-theme-black {
+  background: #000000;
+}
+#BangXanhCanvasWrap {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  overflow: hidden;
+  touch-action: none;
+}
+#bx-grid-canvas, #bx-ink-canvas, #bx-active-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+#bx-grid-canvas, #bx-active-canvas {
+  pointer-events: none;
+}
+
+/* 8 Cạnh và Góc kéo thay đổi kích thước Bảng Xanh */
+.bx-resize-edge, .bx-resize-corner {
+  position: absolute;
+  z-index: 530;
+  touch-action: none;
+}
+.bx-edge-n {
+  top: -6px; left: 16px; right: 16px; height: 20px;
+  cursor: ns-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.bx-top-grip-pill {
+  background: rgba(15, 23, 42, 0.45);
+  color: rgba(226, 232, 240, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  padding: 1px 12px;
+  font-size: 10.5px;
+  font-weight: 600;
+  pointer-events: none;
+}
+#CuaSoBangXanh.bx-fullscreen .bx-top-grip-pill {
+  opacity: 0.28;
+}
+.bx-edge-s { bottom: -5px; left: 16px; right: 16px; height: 10px; cursor: ns-resize; }
+.bx-edge-w { left: -5px; top: 16px; bottom: 16px; width: 12px; cursor: ew-resize; }
+.bx-edge-e { right: -5px; top: 16px; bottom: 16px; width: 12px; cursor: ew-resize; }
+.bx-corner-nw { top: -6px; left: -6px; width: 18px; height: 18px; cursor: nwse-resize; }
+.bx-corner-ne { top: -6px; right: -6px; width: 18px; height: 18px; cursor: nesw-resize; }
+.bx-corner-sw { bottom: -6px; left: -6px; width: 18px; height: 18px; cursor: nesw-resize; }
+.bx-corner-se { bottom: -6px; right: -6px; width: 18px; height: 18px; cursor: nwse-resize; }
+
+#ThanhDayBangXanh {
+  height: 34px;
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 3px;
+  padding: 0 5px;
+  overflow-x: auto;
+  overflow-y: hidden !important;
+  scrollbar-width: none;
+  transition: background 0.15s, border-color 0.15s;
+}
+#ThanhDayBangXanh::-webkit-scrollbar {
+  display: none;
+}
+.bx-dynamic-tools {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-wrap: nowrap;
+}
+.bx-window-controls {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: auto;
+  padding-left: 4px;
+  border-left: 1px solid rgba(148, 163, 184, 0.35);
+  flex-shrink: 0;
+}
+.bx-gear-btn {
+  color: #FEF08A !important;
+  border-color: #F59E0B !important;
+}
+
+/* Hộp thoại Sắp xếp thứ tự công cụ */
+.sort-hint {
+  font-size: 12.5px;
+  color: #334E68;
+  margin-bottom: 10px;
+  line-height: 1.45;
+}
+.sort-layout {
+  display: flex;
+  gap: 12px;
+  height: 330px;
+}
+.sort-list {
+  flex: 1;
+  border: 1.5px solid #0284C7;
+  border-radius: 8px;
+  overflow-y: auto;
+  padding: 4px;
+  background: #FFFFFF;
+}
+.sort-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: #102A43;
+}
+.sort-item:hover {
+  background: #F0F9FF;
+}
+.sort-item.selected {
+  background: #DCEBFC;
+  color: #004578;
+  font-weight: 700;
+}
+.sort-item input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #0284C7;
+}
+.sort-item.sort-item-hidden span {
+  text-decoration: line-through;
+  color: #94A3B8;
+}
+.sort-vis-pill {
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid #CBD5E1;
+}
+.sort-vis-pill.vis-on {
+  background: #E0F2FE;
+  color: #0369A1;
+  border-color: #7DD3FC;
+}
+.sort-vis-pill.vis-off {
+  background: #FEE2E2;
+  color: #BE123C;
+  border-color: #FDA4AF;
+}
+.sort-side-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 130px;
+}
+/* Tông tối khi nền Xanh phấn */
+#ThanhDayBangXanh.bx-bar-dark {
+  background: #07473A;
+  border-top: 1px solid rgba(255, 255, 255, 0.22);
+  color: #F8FAFC;
+}
+/* Tông thuần đen tiệp màu dải đen 2 bên khi dùng Bảng đen */
+#ThanhDayBangXanh.bx-bar-dark.bx-bar-black {
+  background: #000000;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  color: #E2E8F0;
+}
+/* Tông sáng khi nền Trắng / Vàng kem (đồng bộ đúng yêu cầu của Thầy!) */
+#ThanhDayBangXanh.bx-bar-light {
+  background: #E2E8F0;
+  border-top: 1px solid #CBD5E1;
+  color: #1E293B;
+}
+
+.bx-btn, .bx-size {
+  padding: 3px 6px;
+  border-radius: 5px;
+  font-size: 11px;
+  line-height: 1.2;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.10);
+  color: inherit;
+}
+#ThanhDayBangXanh.bx-bar-light .bx-btn,
+#ThanhDayBangXanh.bx-bar-light .bx-size {
+  background: #FFFFFF;
+  border-color: #CBD5E1;
+  color: #1E293B;
+}
+.bx-btn.active, .bx-size.active {
+  background: #F59E0B !important;
+  color: #0F172A !important;
+  border-color: #D97706 !important;
+}
+.bx-btn.bx-danger {
+  background: rgba(239, 68, 68, 0.28);
+  border-color: #F87171;
+  color: #FECACA;
+}
+#ThanhDayBangXanh.bx-bar-light .bx-btn.bx-danger {
+  background: #FFE4E6;
+  border-color: #FDA4AF;
+  color: #BE123C;
+}
+.bx-btn.bx-close {
+  background: #DC2626;
+  border-color: #FCA5A5;
+  color: #FFFFFF;
+  margin-left: auto;
+}
+.bx-group {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+.bx-lbl {
+  font-size: 11px;
+  font-weight: 700;
+  margin: 0 3px 0 1px;
+  white-space: nowrap;
+}
+.bx-color {
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.bx-color.active {
+  transform: scale(1.14);
+  box-shadow: 0 0 0 2px #F59E0B;
+}
+.bx-select {
+  padding: 2px 5px;
+  border-radius: 5px;
+  font-size: 11px;
+  height: 24px;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.10);
+  color: inherit;
+  flex-shrink: 0;
+}
+.bx-select option {
+  background: #0F172A;
+  color: #F8FAFC;
+}
+#ThanhDayBangXanh.bx-bar-light .bx-select {
+  background: #FFFFFF;
+  border-color: #CBD5E1;
+  color: #1E293B;
+}
+#ThanhDayBangXanh.bx-bar-light .bx-select option {
+  background: #FFFFFF;
+  color: #1E293B;
+}
+
+/* ============================================================================
+   6. MODALS (CÔNG THỨC KATEX, KHO HÌNH TOÁN-LÝ, CASIO, MÔ PHỎNG VẬT LÍ)
+   ============================================================================ */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  z-index: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.modal-dialog {
+  background: #FFFFFF;
+  border-radius: 14px;
+  width: 100%;
+  max-width: 620px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+  border: 1px solid var(--xanh-vien);
+}
+.modal-header {
+  background: linear-gradient(90deg, #1D58B4 0%, #2F7BE0 100%);
+  color: #FFFFFF;
+  padding: 11px 16px;
+  font-weight: 700;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.modal-close {
+  background: rgba(255, 255, 255, 0.2);
+  color: #FFFFFF;
+  border: none;
+  border-radius: 6px;
+  width: 26px;
+  height: 26px;
+  cursor: pointer;
+  font-weight: 800;
+}
+.modal-body {
+  padding: 16px;
+}
+.formula-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.fp-btn {
+  background: #EEF4FC;
+  border: 1px solid var(--xanh-vien);
+  color: var(--xanh-dam);
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.fp-btn:hover {
+  background: #D6E6FB;
+}
+#formula-input {
+  width: 100%;
+  border: 1.5px solid #9CB7DD;
+  border-radius: 8px;
+  padding: 10px;
+  font-family: Consolas, monospace;
+  font-size: 14px;
+  margin-bottom: 12px;
+  -webkit-user-select: text;
+  user-select: text;
+}
+.formula-preview-box {
+  min-height: 68px;
+  background: #F8FAFC;
+  border: 1px dashed #94A3B8;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  font-size: 22px;
+}
+.modal-footer {
+  padding: 10px 16px;
+  background: #F1F5F9;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.mbtn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  border: none;
+}
+.mbtn.secondary {
+  background: #E2E8F0;
+  color: #334155;
+}
+.mbtn.primary {
+  background: #1D58B4;
+  color: #FFFFFF;
+}
+
+/* Kho hình grid */
+.modal-dialog.modal-large {
+  max-width: 820px;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+}
+.modal-dialog.modal-large .modal-body {
+  overflow-y: auto;
+}
+.kh-sec-title {
+  font-size: 13px;
+  color: var(--xanh-dam);
+  margin-bottom: 8px;
+}
+.khohinh-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+.khohinh-img-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.kh-img-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 6px;
+  background: #FFFFFF;
+  border: 1px solid var(--xanh-vien);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.kh-img-card:hover {
+  border-color: #FF6600;
+  background: #FFF8F0;
+}
+.kh-img-card img {
+  width: 100%;
+  height: 76px;
+  object-fit: contain;
+}
+.kh-img-card span {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--chu);
+  text-align: center;
+}
+
+/* ============================================================================
+   THANH CÔNG CỤ DỰNG HÌNH ĐỘC LẬP NỔI (#ThanhDungHinh — MA TRẬN 24 CÔNG CỤ)
+   ============================================================================ */
+.geom-floating-toolbar {
+  position: fixed;
+  top: 128px;
+  left: 60px;
+  width: fit-content;
+  width: -webkit-fit-content;
+  background: rgba(255, 255, 255, 0.98);
+  border: 1.5px solid #0284C7;
+  border-radius: 8px;
+  padding: 5px 10px 8px 7px;
+  z-index: 620;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.28);
+  max-width: 96vw;
+  touch-action: none;
+}
+.geom-submenu-bar {
+  width: 0;
+  min-width: 100%;
+  box-sizing: border-box;
+}
+.geom-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 800;
+  font-size: 11.5px;
+  color: #0369A1;
+  padding: 4px 4px 6px 4px;
+  cursor: move;
+  touch-action: none;
+}
+.geom-resize-e {
+  position: absolute;
+  top: 24px;
+  right: -4px;
+  bottom: 14px;
+  width: 14px;
+  cursor: ew-resize;
+  touch-action: none;
+}
+.geom-resize-e::after {
+  content: '';
+  position: absolute;
+  right: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 28px;
+  border-radius: 2px;
+  background: rgba(2, 132, 199, 0.45);
+}
+.geom-resize-s {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: -4px;
+  height: 14px;
+  cursor: ns-resize;
+  touch-action: none;
+}
+.geom-resize-s::after {
+  content: '';
+  position: absolute;
+  bottom: 5px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 32px;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(2, 132, 199, 0.45);
+}
+.geom-resize-se {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  width: 16px;
+  height: 16px;
+  cursor: nwse-resize;
+  touch-action: none;
+}
+.geom-header small {
+  color: #64748B;
+  margin-left: 4px;
+}
+.geom-header button {
+  background: transparent;
+  border: none;
+  font-weight: 800;
+  color: #64748B;
+  cursor: pointer;
+  padding: 0 4px;
+}
+.geom-matrix-grid {
+  display: grid;
+  gap: 4px;
+}
+.geom-matrix-grid.cols-12 { grid-template-columns: repeat(12, 90px); }
+.geom-matrix-grid.cols-8 { grid-template-columns: repeat(8, 102px); }
+.geom-matrix-grid.cols-6 { grid-template-columns: repeat(6, 102px); }
+.geom-matrix-grid.cols-4 { grid-template-columns: repeat(4, 106px); }
+.geom-matrix-grid.cols-3 { grid-template-columns: repeat(3, 108px); }
+.geom-matrix-grid.cols-2 { grid-template-columns: repeat(2, 114px); }
+
+.gbtn {
+  height: 28px;
+  background: #F8FAFC;
+  border: 1px solid #CBD5E1;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #1E293B;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 4px;
+}
+.gbtn:hover {
+  background: #E0F2FE;
+  border-color: #38BDF8;
+  color: #0369A1;
+}
+.gbtn.active {
+  background: #0284C7;
+  border-color: #0369A1;
+  color: #FFFFFF;
+}
+.gbtn.gbtn-cancel {
+  background: #FEE2E2;
+  border-color: #FCA5A5;
+  color: #DC2626;
+  font-weight: 700;
+}
+.geom-submenu-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 6px;
+  background: #F0F9FF;
+  border: 1px solid #BAE6FD;
+  border-radius: 6px;
+  max-width: 760px;
+}
+.geom-sub-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+.gsub-tab {
+  background: #E0F2FE;
+  border: 1px solid #7DD3FC;
+  border-radius: 5px;
+  padding: 4px 9px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #0369A1;
+  cursor: pointer;
+}
+.gsub-tab.active {
+  background: #0284C7;
+  border-color: #0369A1;
+  color: #FFFFFF;
+}
+.gsub-tab.is-reorder {
+  margin-left: auto;
+  background: #FEF3C7;
+  border-color: #F59E0B;
+  color: #B45309;
+}
+.gsub-tab.is-reorder.active {
+  background: #D97706;
+  color: #FFFFFF;
+}
+.geom-sub-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 5px;
+}
+@media (max-width: 680px) {
+  .geom-sub-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.gsub-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: 36px;
+  background: #FFFFFF;
+  border: 1px solid #7DD3FC;
+  border-radius: 5px;
+  padding: 4px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: #0369A1;
+  cursor: pointer;
+}
+.gsub-btn:hover {
+  background: #0284C7;
+  color: #FFFFFF;
+}
+.gsub-btn.reorder-pick,
+.gbtn.reorder-pick {
+  background: #FEF08A !important;
+  border-color: #D97706 !important;
+  color: #92400E !important;
+  box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.45);
+}
+.geom-guide-text {
+  margin-top: 5px;
+  background: #F1F5F9;
+  border: 1px dashed #94A3B8;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 11px;
+  color: #334155;
+}
+.kh-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 12px;
+  background: #F8FAFC;
+  border: 1px solid var(--xanh-vien);
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: left;
+}
+.kh-card:hover {
+  background: #E0ECFB;
+  border-color: var(--xanh);
+}
+.kh-card b {
+  font-size: 13px;
+  color: var(--xanh-dam);
+}
+.kh-card span {
+  font-size: 11.5px;
+  color: var(--chu-mo);
+}
+
+/* Casio FX-580VN X Floating Window */
+.floating-window {
+  position: fixed;
+  top: 90px;
+  right: 24px;
+  width: 280px;
+  background: #1E293B;
+  border: 2px solid #475569;
+  border-radius: 14px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+  z-index: 650;
+  overflow: hidden;
+}
+.fw-header {
+  background: #0F172A;
+  color: #F8FAFC;
+  padding: 8px 12px;
+  font-weight: 700;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: move;
+}
+.fw-close {
+  background: #DC2626;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 5px;
+  padding: 2px 8px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.casio-body {
+  padding: 10px;
+}
+.casio-screen {
+  background: #D9F99D;
+  color: #0F172A;
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-bottom: 10px;
+  font-family: Consolas, monospace;
+  min-height: 56px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+#casio-expr {
+  font-size: 12px;
+  color: #365314;
+  min-height: 16px;
+}
+#casio-result {
+  font-size: 20px;
+  font-weight: 800;
+  text-align: right;
+}
+.casio-keys {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 5px;
+}
+.casio-keys button {
+  padding: 9px 4px;
+  border-radius: 6px;
+  border: 1px solid #475569;
+  background: #334155;
+  color: #F8FAFC;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+.casio-keys button:active {
+  background: #475569;
+}
+.casio-keys .ck-red { background: #E11D48; }
+.casio-keys .ck-warn { background: #D97706; }
+.casio-keys .ck-eq { background: #0284C7; }
+
+/* Cửa sổ Mô phỏng Vật lí HTML5 */
+.floating-sim {
+  position: fixed;
+  inset: 48px 36px;
+  background: #0F172A;
+  border: 2px solid #38BDF8;
+  border-radius: 14px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+  z-index: 660;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.sim-selector-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+#sim-select {
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 12.5px;
+}
+#sim-iframe {
+  flex: 1;
+  width: 100%;
+  border: none;
+  background: #000000;
+}
+
+/* TOAST */
+.toast-banner {
+  position: fixed;
+  top: 46px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #FFFDF5;
+  color: #0F172A;
+  border: 1.5px solid #0284C7;
+  padding: 7px 16px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 700;
+  z-index: 900;
+  pointer-events: none;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.22);
+}
+
+/* ============================================================================
+   7. GIAI ĐOẠN 2 - 3 - 4: BẢNG XANH VÔ HẠN HUD, THƯỚC KẺ XOAY 360°, NHẬP CHỮ NỔI, CÀI APP IPAD
+   ============================================================================ */
+.top-read-select {
+  background: rgba(255, 255, 255, 0.16);
+  color: #FFFFFF;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 6px;
+  padding: 3px 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.top-read-select option {
+  color: #0F172A;
+  background: #FFFFFF;
+}
+.fav-btn.fav-install {
+  background: #F59E0B;
+  color: #0F172A;
+  border-color: #FEF08A;
+  font-weight: 800;
+}
+
+/* Môi trường đọc dịu mắt cho toàn khung cuộn PDF */
+#KhungDocPdf.env-cream { background: #EDE4D3; }
+#KhungDocPdf.env-blue { background: #CFE2F3; }
+#KhungDocPdf.env-board { background: #073B30; }
+#KhungDocPdf.env-night { background: #0F172A; }
+
+/* HUD Camera Bảng Xanh Vô Hạn */
+.bx-infinite-hud {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  z-index: 525;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(15, 23, 42, 0.84);
+  border: 1.5px solid rgba(56, 189, 248, 0.65);
+  border-radius: 999px;
+  padding: 4px 8px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(6px);
+}
+.bx-hud-btn {
+  background: rgba(255, 255, 255, 0.12);
+  color: #F8FAFC;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+  padding: 3px 9px;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.bx-hud-btn:hover, .bx-hud-btn.active {
+  background: #F59E0B;
+  color: #0F172A;
+  border-color: #FEF08A;
+}
+.bx-hud-badge {
+  background: rgba(2, 132, 199, 0.45);
+  color: #FEF08A;
+  min-width: 92px;
+  text-align: center;
+}
+
+/* Thước kẻ tương tác xoay 360° & Hút nét bút */
+.interactive-ruler {
+  position: fixed;
+  left: 180px;
+  top: 260px;
+  width: 720px;
+  height: 72px;
+  z-index: 640;
+  display: flex;
+  align-items: center;
+  background: linear-gradient(180deg, rgba(224, 242, 254, 0.88) 0%, rgba(186, 230, 253, 0.78) 100%);
+  border: 2px solid #0284C7;
+  border-radius: 10px;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.32);
+  backdrop-filter: blur(4px);
+  touch-action: none;
+  transform-origin: center center;
+}
+.ruler-body {
+  flex: 1;
+  height: 100%;
+  position: relative;
+  cursor: move;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+}
+#ruler-ticks-canvas {
+  width: 100%;
+  height: 36px;
+  display: block;
+  pointer-events: none;
+}
+.ruler-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding-bottom: 5px;
+}
+.ruler-angle-badge {
+  background: #0F172A;
+  color: #FEF08A;
+  font-weight: 800;
+  font-size: 11.5px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  border: 1px solid #38BDF8;
+}
+.ruler-ang-btn {
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid #0284C7;
+  color: #0369A1;
+  border-radius: 5px;
+  padding: 1px 7px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.ruler-ang-btn:hover {
+  background: #0284C7;
+  color: #FFFFFF;
+}
+.ruler-close-btn {
+  background: #EF4444;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 5px;
+  padding: 1px 7px;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.ruler-rot-handle {
+  width: 32px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(2, 132, 199, 0.22);
+  color: #0369A1;
+  font-size: 18px;
+  font-weight: 800;
+  cursor: grab;
+  user-select: none;
+}
+.ruler-rot-left { border-right: 1px dashed #0284C7; border-radius: 8px 0 0 8px; }
+.ruler-rot-right { border-left: 1px dashed #0284C7; border-radius: 0 8px 8px 0; }
+
+/* Hộp nhập chữ nổi trực tiếp tại vị trí chạm */
+.inline-text-editor {
+  position: fixed;
+  z-index: 680;
+  width: 310px;
+  background: #FFFFFF;
+  border: 2px solid #0284C7;
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.35);
+  overflow: hidden;
+}
+.ite-bar {
+  background: #0284C7;
+  color: #FFFFFF;
+  padding: 5px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 700;
+}
+.ite-btns {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.ite-btns button {
+  background: rgba(255, 255, 255, 0.2);
+  color: #FFFFFF;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 5px;
+  padding: 2px 6px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.ite-btns .ite-ok {
+  background: #10B981;
+  border-color: #A7F3D0;
+}
+.ite-btns .ite-cancel {
+  background: #EF4444;
+  border-color: #FCA5A5;
+}
+#ite-textarea {
+  width: 100%;
+  border: none;
+  outline: none;
+  padding: 8px 10px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: "Be Vietnam Pro", "Segoe UI", sans-serif;
+  resize: vertical;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Công thức Toán-Lý nâng cao & Cửa sổ Mô phỏng PiP */
+.formula-cat-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0369A1;
+  margin: 4px 0 5px 0;
+}
+.formula-size-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 6px 0 10px 0;
+  font-size: 12.5px;
+}
+.formula-size-row input[type="range"] {
+  flex: 1;
+  accent-color: #0284C7;
+}
+.sim-action-btn {
+  background: #0284C7;
+  color: #FFFFFF;
+  border: 1px solid #7DD3FC;
+  border-radius: 6px;
+  padding: 4px 9px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.sim-action-btn:hover {
+  background: #0369A1;
+}
+.floating-sim.pip-mode {
+  inset: auto 18px 46px auto;
+  width: 480px;
+  height: 310px;
+}
+
+/* Hộp thoại Cài App iPad & Kiểm tra Offline 100% */
+.pwa-status-card {
+  background: #F0FDF4;
+  border: 1.5px solid #22C55E;
+  border-radius: 10px;
+  padding: 12px;
+}
+.pwa-status-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.pwa-status-top b {
+  font-size: 14px;
+  color: #15803D;
+}
+.pwa-status-top p {
+  font-size: 12px;
+  color: #166534;
+  margin-top: 3px;
+}
+.pwa-progress-wrap {
+  height: 8px;
+  background: #DCFCE7;
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: 10px;
+}
+.pwa-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #16A34A, #22C55E);
+  transition: width 0.25s;
+}
+.ipad-steps-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.ipad-step-card {
+  background: #F8FAFC;
+  border: 1px solid #CBD5E1;
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.step-num {
+  display: inline-block;
+  align-self: flex-start;
+  background: #0284C7;
+  color: #FFFFFF;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+.ipad-step-card b {
+  font-size: 13px;
+  color: #0F172A;
+}
+.ipad-step-card p {
+  font-size: 12px;
+  color: #475569;
+  line-height: 1.45;
+}
+.ipad-gestures-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+.gesture-item {
+  background: #EFF6FF;
+  border: 1px solid #BFDBFE;
+  border-radius: 8px;
+  padding: 9px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.gesture-item b {
+  font-size: 12.5px;
+  color: #1D4ED8;
+}
+.gesture-item span {
+  font-size: 11.5px;
+  color: #334155;
+}
+
+/* === THANH MINI DỌC TÙY CHỌN TRÊN BẢNG XANH === */
+.bx-mini-dock {
+  position: absolute;
+  left: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 35;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 4px 3px;
+  background: rgba(15, 23, 42, 0.78);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 10px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.28);
+  max-height: calc(100% - 16px);
+  overflow-y: auto;
+  scrollbar-width: none;
+  touch-action: manipulation;
+}
+.bx-mini-dock::-webkit-scrollbar { display: none; }
+.bx-mini-dock.collapsed {
+  padding: 3px;
+}
+.bx-mini-dock.collapsed .bx-mini-list,
+.bx-mini-dock.collapsed .bx-mini-cfg {
+  display: none;
+}
+.bx-mini-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  align-items: center;
+}
+.bx-mini-dock.two-col .bx-mini-list {
+  display: grid;
+  grid-template-columns: repeat(2, 34px);
+  gap: 3px;
+}
+.bx-mini-dock.two-col .bx-mini-top-toggle,
+.bx-mini-dock.two-col .bx-mini-collapse,
+.bx-mini-dock.two-col .bx-mini-cfg {
+  width: 71px;
+}
+.bx-mini-dock.two-col ~ .bx-mini-picker {
+  left: 88px;
+}
+.bx-mini-top-toggle,
+.bx-mini-collapse,
+.bx-mini-cfg {
+  width: 32px;
+  height: 19px;
+  border: none;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.10);
+  color: #cbd5e1;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.bx-mini-top-toggle:hover,
+.bx-mini-collapse:hover,
+.bx-mini-cfg:hover {
+  background: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+}
+.bx-mini-top-toggle.active {
+  background: #FACC15;
+  color: #0F172A;
+}
+
+/* Bộ công cụ mini nổi chính giữa phía trên bảng xanh */
+.bx-top-mini-bar {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  background: rgba(15, 23, 42, 0.86);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.30);
+  touch-action: manipulation;
+}
+.bx-top-mini-bar.hidden {
+  display: none !important;
+}
+.bx-top-mini-colors {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.bx-top-mini-btn {
+  padding: 4px 10px;
+  border-radius: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.12);
+  color: #F8FAFC;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.bx-top-mini-btn:hover {
+  background: rgba(255, 255, 255, 0.24);
+}
+.bx-top-mini-btn.active {
+  background: #FACC15;
+  color: #0F172A;
+  border-color: #FEF08A;
+}
+.bx-top-pan-btn {
+  padding: 4px 7px;
+  min-width: 28px;
+  cursor: ns-resize;
+  touch-action: none;
+}
+.bx-top-stroke-wrap {
+  position: relative;
+}
+.bx-top-stroke-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 118px;
+  background: rgba(15, 23, 42, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 8px;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.35);
+  z-index: 45;
+}
+.bx-top-stroke-menu.hidden {
+  display: none !important;
+}
+.bx-top-stroke-opt {
+  text-align: left;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #F1F5F9;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.bx-top-stroke-opt:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+.bx-top-stroke-opt.active {
+  background: #FACC15;
+  color: #0F172A;
+}
+.bx-mini-btn {
+  width: 34px;
+  min-height: 30px;
+  padding: 2px 1px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #f1f5f9;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  line-height: 1.02;
+  transition: background 0.12s, border-color 0.12s, transform 0.1s;
+}
+.bx-mini-btn:active {
+  transform: scale(0.94);
+}
+.bx-mini-btn .bx-m-ico {
+  font-size: 13px;
+}
+.bx-mini-btn .bx-m-lbl {
+  font-size: 7.5px;
+  font-weight: 600;
+  opacity: 0.92;
+  white-space: nowrap;
+  letter-spacing: -0.2px;
+}
+.bx-mini-btn.active {
+  background: #facc15;
+  color: #0f172a;
+  border-color: #fef08a;
+  box-shadow: 0 0 0 1px rgba(250, 204, 21, 0.45);
+}
+.bx-mini-picker {
+  position: absolute;
+  left: 64px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 40;
+  width: 264px;
+  max-height: calc(100% - 24px);
+  display: flex;
+  flex-direction: column;
+  background: rgba(15, 23, 42, 0.94);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 12px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.42);
+  color: #f8fafc;
+  overflow: hidden;
+}
+.bx-mini-picker.hidden { display: none; }
+.bx-mini-picker-hd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 11px;
+  font-size: 12px;
+  font-weight: 700;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+.bx-mini-picker-hd button {
+  background: none;
+  border: none;
+  color: #cbd5e1;
+  font-size: 14px;
+  cursor: pointer;
+}
+.bx-mini-picker-grid {
+  padding: 8px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 5px;
+  overflow-y: auto;
+}
+.bx-mini-opt {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 7px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid transparent;
+  color: #e2e8f0;
+  font-size: 11px;
+  cursor: pointer;
+  text-align: left;
+}
+.bx-mini-opt.selected {
+  background: rgba(56, 189, 248, 0.22);
+  border-color: #38bdf8;
+  color: #ffffff;
+  font-weight: 600;
+}
+.bx-mini-picker-ft {
+  padding: 7px 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  display: flex;
+  justify-content: flex-end;
+}
+.bx-mini-picker-ft button {
+  padding: 4px 9px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
+  color: #f8fafc;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+/* Hộp thoại Thông tin — NKPDFPlus (2 cột chuẩn Desktop/iPad) */
+.copyright-modal-dialog {
+  max-width: 920px;
+  width: min(920px, 95vw);
+  background: #081330;
+  border: 1px solid rgba(96, 165, 250, 0.35);
+  color: #F8FAFC;
+  border-radius: 16px;
+  overflow: hidden;
+}
+.copyright-modal-header {
+  background: #0B1B42;
+  border-bottom: 1px solid rgba(96, 165, 250, 0.22);
+  color: #F8FAFC;
+}
+.copyright-modal-header .modal-close {
+  color: #CBD5E1;
+}
+.nkplus-about-body {
+  background: radial-gradient(circle at 20% 20%, #0E2356 0%, #081330 65%);
+  padding: 20px 22px;
+  max-height: 84vh;
+  overflow-y: auto;
+}
+.nkplus-about-grid {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 22px;
+  align-items: stretch;
+}
+@media (max-width: 780px) {
+  .nkplus-about-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.nkplus-left-panel {
+  background: rgba(12, 28, 68, 0.86);
+  border: 1px solid rgba(96, 165, 250, 0.26);
+  border-radius: 18px;
+  padding: 22px 16px 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.nkplus-app-icon {
+  width: 74px;
+  height: 74px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #FB923C, #EA580C);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 24px rgba(234, 88, 12, 0.35);
+  margin-bottom: 12px;
+}
+.nkplus-app-sheet {
+  width: 44px;
+  height: 52px;
+  background: #FFFFFF;
+  border-radius: 8px 14px 8px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.05;
+}
+.nkplus-sheet-nk {
+  font-size: 13px;
+  font-weight: 900;
+  color: #EA580C;
+}
+.nkplus-sheet-pdf {
+  font-size: 13px;
+  font-weight: 900;
+  color: #C2410C;
+}
+.nkplus-wordmark {
+  font-size: 27px;
+  font-weight: 900;
+  letter-spacing: -0.4px;
+  margin-bottom: 4px;
+}
+.nkplus-wordmark .w-nk { color: #FFFFFF; }
+.nkplus-wordmark .w-pdf { color: #FBBF24; }
+.nkplus-wordmark .w-plus { color: #38BDF8; }
+.nkplus-subtitle {
+  font-size: 12px;
+  color: #CBD5E1;
+  margin-bottom: 12px;
+}
+.nkplus-ver-pill {
+  background: linear-gradient(135deg, #FDE047, #F59E0B);
+  color: #0F172A;
+  font-size: 12px;
+  font-weight: 900;
+  padding: 5px 18px;
+  border-radius: 999px;
+  letter-spacing: 0.4px;
+  margin-bottom: 16px;
+}
+.nkplus-feat-heading {
+  font-size: 11px;
+  font-weight: 800;
+  color: #7DD3FC;
+  letter-spacing: 0.8px;
+  margin-bottom: 10px;
+}
+.nkplus-feat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+  width: 100%;
+}
+.nkplus-feat-chip {
+  background: rgba(30, 58, 138, 0.38);
+  border: 1px solid rgba(96, 165, 250, 0.25);
+  border-radius: 9px;
+  padding: 7px 6px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #E2E8F0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nkplus-right-panel {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.nkplus-info-title {
+  margin: 0 0 12px;
+  font-size: 22px;
+  font-weight: 800;
+  color: #FFFFFF;
+}
+.author-cards-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.author-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  background: rgba(12, 28, 68, 0.86);
+  border: 1px solid rgba(96, 165, 250, 0.28);
+  border-radius: 16px;
+  padding: 14px 16px;
+}
+.author-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+  color: #0F172A;
+}
+.author-avatar-gold {
+  background: linear-gradient(135deg, #FDE047, #F59E0B);
+}
+.author-avatar-green {
+  background: linear-gradient(135deg, #6EE7B7, #10B981);
+}
+.author-info {
+  flex: 1;
+  min-width: 0;
+}
+.author-role {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  color: #94A3B8;
+  margin-bottom: 2px;
+}
+.author-role-green {
+  color: #34D399;
+}
+.author-name {
+  font-size: 16px;
+  font-weight: 800;
+  color: #FFFFFF;
+  line-height: 1.3;
+}
+.author-brand-tag {
+  color: #4ADE80;
+  font-weight: 800;
+}
+.author-desc {
+  font-size: 12.5px;
+  color: #CBD5E1;
+  margin-top: 2px;
+  line-height: 1.4;
+}
+.author-links-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 9px;
+}
+.author-fb-link,
+.author-phone-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 13px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+}
+.author-fb-link {
+  border: 1px solid rgba(96, 165, 250, 0.35);
+  background: rgba(30, 58, 138, 0.35);
+  color: #F8FAFC;
+}
+.author-fb-link:hover {
+  background: rgba(59, 130, 246, 0.35);
+  border-color: #60A5FA;
+}
+.author-phone-link {
+  border: 1px solid rgba(52, 211, 153, 0.45);
+  background: rgba(6, 78, 59, 0.35);
+  color: #6EE7B7;
+}
+.author-phone-link:hover {
+  background: rgba(16, 185, 129, 0.28);
+}
+.author-cs-box {
+  margin-top: 9px;
+  font-size: 11.5px;
+  color: #94A3B8;
+  line-height: 1.5;
+}
+.author-cs-title {
+  color: #CBD5E1;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+.nkplus-right-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+.nkplus-close-pill {
+  background: linear-gradient(135deg, #FDE047, #F59E0B);
+  color: #0F172A;
+  border: none;
+  border-radius: 999px;
+  padding: 8px 26px;
+  font-size: 13.5px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.nkplus-close-pill:hover {
+  filter: brightness(1.06);
+}
+
+/* Kho Đề Vật lý 10-11-12 */
+.de-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.de-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.de-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 13px;
+  border-radius: 9px;
+  border: 1px solid #CBD5E1;
+  background: #F8FAFC;
+  color: #1E293B;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.de-tab.active {
+  background: #1D58B4;
+  border-color: #1D58B4;
+  color: #FFFFFF;
+}
+.de-cnt {
+  background: rgba(15, 23, 42, 0.12);
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+}
+.de-tab.active .de-cnt {
+  background: rgba(255, 255, 255, 0.24);
+}
+.de-search {
+  flex: 1;
+  min-width: 210px;
+  padding: 7px 11px;
+  border-radius: 9px;
+  border: 1px solid #CBD5E1;
+  font-size: 13px;
+  outline: none;
+}
+.de-search:focus {
+  border-color: #1D58B4;
+}
+.de-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 220px;
+  max-height: 54vh;
+  overflow-y: auto;
+}
+.de-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 13px;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  background: #FFFFFF;
+}
+.de-item:hover {
+  border-color: #93C5FD;
+  background: #F8FAFC;
+}
+.de-item-meta {
+  min-width: 0;
+  flex: 1;
+}
+.de-item-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0F172A;
+  word-break: break-word;
+}
+.de-item-sub {
+  font-size: 11.5px;
+  color: #64748B;
+  margin-top: 2px;
+}
+.de-empty {
+  padding: 26px 16px;
+  text-align: center;
+  color: #475569;
+  font-size: 13px;
+  line-height: 1.6;
+  background: #F8FAFC;
+  border: 1px dashed #CBD5E1;
+  border-radius: 10px;
+}
+
+/* ============================================================================
+   MOBILE STUDENT MODE (GIAO DIỆN GỌN XEM ĐỀ TRÊN ĐIỆN THOẠI)
+   ============================================================================ */
+.mobile-student-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: calc(6px + env(safe-area-inset-top, 0px)) 10px 6px;
+  background: linear-gradient(135deg, #0F172A, #1E3A8A);
+  color: #F8FAFC;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+  flex-shrink: 0;
+  z-index: 420;
+}
+.ms-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ms-btn {
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.12);
+  color: #F8FAFC;
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 6px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.ms-btn-primary {
+  background: #0284C7;
+  border-color: #38BDF8;
+}
+.ms-btn-icon {
+  padding: 6px 8px;
+}
+.ms-page-info {
+  font-size: 12px;
+  font-weight: 700;
+  color: #E2E8F0;
+  background: rgba(15, 23, 42, 0.45);
+  padding: 4px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.mobile-student-dock {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  z-index: 430;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 7px;
+  background: rgba(15, 23, 42, 0.92);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 999px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.35);
+  max-width: calc(100vw - 16px);
+  overflow-x: auto;
+}
+.ms-dock-btn {
+  border: none;
+  background: transparent;
+  color: #E2E8F0;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 7px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.ms-dock-btn.active {
+  background: #0284C7;
+  color: #FFFFFF;
+}
+
+body.mobile-student-mode #ThanhTren,
+body.mobile-student-mode #Ribbon,
+body.mobile-student-mode #ThanhCongCuDoc,
+body.mobile-student-mode #ThanhTabVaTim,
+body.mobile-student-mode #ThanhTrangThai,
+body.mobile-student-mode #CuaSoBangXanh,
+body.mobile-student-mode #ThanhDayBangXanh,
+body.mobile-student-mode #ThanhDungHinh,
+body.mobile-student-mode #CuaSoCasio {
+  display: none !important;
+}
+body.mobile-student-mode #MainContainer {
+  flex: 1;
+  min-height: 0;
+}
+body.mobile-student-mode #pdf-scroll-container {
+  padding-bottom: 72px;
+}
+
+@media (max-width: 600px) {
+  #ModalDeVatLy .modal-card {
+    width: 96vw;
+    max-width: 96vw;
+    max-height: 88vh;
+  }
+  .de-item {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}
+
+/* ============================================================================
+   PHIẾU TRẢ LỜI & CHẤM ĐIỂM TỰ ĐỘNG (PHƯƠNG ÁN 3)
+   ============================================================================ */
+.answer-sheet-fab {
+  position: fixed;
+  right: 18px;
+  bottom: 22px;
+  z-index: 480;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: #fff;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  border-radius: 999px;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.38);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.answer-sheet-fab:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px rgba(37, 99, 235, 0.48);
+}
+body.mobile-student-mode .answer-sheet-fab {
+  bottom: 72px;
+  right: 12px;
+  padding: 8px 14px;
+  font-size: 13px;
+}
+.answer-sheet-drawer {
+  position: fixed;
+  top: 46px;
+  right: 0;
+  bottom: 0;
+  width: 350px;
+  max-width: 94vw;
+  z-index: 520;
+  background: #ffffff;
+  border-left: 1px solid #cbd5e1;
+  box-shadow: -8px 0 30px rgba(15, 23, 42, 0.18);
+  display: flex;
+  flex-direction: column;
+  font-family: inherit;
+}
+.answer-sheet-drawer.hidden,
+.answer-sheet-fab.hidden {
+  display: none !important;
+}
+.ans-drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 14px;
+  background: #eff6ff;
+  border-bottom: 1px solid #bfdbfe;
+}
+.ans-close-btn {
+  background: #dbeafe;
+  color: #1e3a8a;
+  border: 1px solid #93c5fd;
+  border-radius: 8px;
+  padding: 5px 11px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.ans-close-btn:hover {
+  background: #bfdbfe;
+}
+body.mobile-student-mode .answer-sheet-drawer {
+  top: calc(48px + env(safe-area-inset-top, 0px));
+}
+.ans-drawer-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e3a8a;
+}
+.ans-drawer-sub {
+  font-size: 11.5px;
+  color: #475569;
+  margin-top: 2px;
+}
+.ans-score-banner {
+  padding: 10px 14px;
+  background: #f0fdf4;
+  border-bottom: 1px solid #bbf7d0;
+  color: #14532d;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.ans-score-banner .ans-score-big {
+  font-size: 18px;
+  font-weight: 800;
+  color: #15803d;
+}
+.ans-drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ans-part-title {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: #0f766e;
+  background: #f0fdfa;
+  border: 1px solid #99f6e4;
+  border-radius: 6px;
+  padding: 5px 8px;
+  margin-top: 4px;
+}
+.ans-q-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+.ans-q-row.is-correct {
+  background: #f0fdf4;
+  border-color: #4ade80;
+}
+.ans-q-row.is-wrong {
+  background: #fef2f2;
+  border-color: #f87171;
+}
+.ans-q-num {
+  font-weight: 700;
+  font-size: 13px;
+  color: #1e293b;
+  min-width: 48px;
+}
+.ans-opts {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+.ans-opt-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1.5px solid #94a3b8;
+  background: #fff;
+  color: #334155;
+  font-weight: 700;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+.ans-opt-btn.selected {
+  background: #2563eb;
+  border-color: #1d4ed8;
+  color: #fff;
+}
+.ans-opt-btn.ans-key {
+  border-color: #16a34a;
+  box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.35);
+}
+.ans-tf-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 7px 9px;
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.ans-tf-sub {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 3px 6px;
+  border-radius: 6px;
+  font-size: 12.5px;
+}
+.ans-tf-sub.is-correct {
+  background: #dcfce7;
+}
+.ans-tf-sub.is-wrong {
+  background: #fee2e2;
+}
+.ans-tf-btn {
+  padding: 3px 10px;
+  border-radius: 6px;
+  border: 1px solid #94a3b8;
+  background: #fff;
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+}
+.ans-tf-btn.selected {
+  background: #2563eb;
+  border-color: #1d4ed8;
+  color: #fff;
+}
+.ans-short-input {
+  width: 110px;
+  padding: 5px 8px;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
+.ans-key-tag {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #15803d;
+  margin-left: 4px;
+}
+.ans-drawer-foot {
+  padding: 10px 14px;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.ans-drawer-foot .mbtn {
+  flex: 1;
+  min-width: 120px;
+  text-align: center;
+}
+.ans-hdg-btn {
+  background: #0f766e !important;
+  color: #fff !important;
+  border-color: #0d9488 !important;
+  font-weight: 700;
+}
+.de-badge-ans {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #86efac;
+}
+
+.interactive-protractor {
+  position: fixed;
+  z-index: 465;
+  width: 320px;
+  height: 175px;
+  transform-origin: 160px 158px;
+  touch-action: none;
+  cursor: grab;
+  filter: drop-shadow(0 6px 16px rgba(15, 23, 42, 0.25));
+}
+.interactive-protractor:active {
+  cursor: grabbing;
+}
+.protractor-controls {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.78);
+}
+
+/* Multi-Subject Construction Hub inside #ThanhDungHinh */
+.geom-hub-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 6px 10px 4px;
+  border-bottom: 1px solid #E2E8F0;
+}
+.geom-hub-tab {
+  border: 1px solid #BAE6FD;
+  background: #F0F9FF;
+  color: #0369A1;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 5px 10px;
+  border-radius: 9px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.geom-hub-tab.active {
+  background: #0284C7;
+  border-color: #0284C7;
+  color: #FFFFFF;
+}
+.geom-hub-filter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: #F8FAFC;
+  border-bottom: 1px solid #E2E8F0;
+}
+.geom-hub-select {
+  flex: 1.2;
+  min-width: 140px;
+  padding: 5px 8px;
+  border: 1px solid #CBD5E1;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #FFFFFF;
+  color: #0F172A;
+}
+.geom-hub-search {
+  flex: 1;
+  min-width: 110px;
+  padding: 5px 9px;
+  border: 1px solid #CBD5E1;
+  border-radius: 8px;
+  font-size: 12px;
+  background: #FFFFFF;
+  color: #0F172A;
+}
+.geom-hub-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 6px;
+  padding: 8px 10px 10px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+.geom-hub-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 7px 9px;
+  border: 1px solid #BAE6FD;
+  background: #FFFFFF;
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: left;
+}
+.geom-hub-btn:hover, .geom-hub-btn:active {
+  background: #E0F2FE;
+  border-color: #38BDF8;
+}
+.geom-hub-btn b {
+  font-size: 12.5px;
+  color: #0369A1;
+}
+.geom-hub-btn span {
+  font-size: 10.5px;
+  color: #64748B;
+}

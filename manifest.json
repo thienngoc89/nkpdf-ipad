@@ -1,0 +1,32 @@
+{
+  "id": "./",
+  "name": "NKPDF 2.9",
+  "short_name": "NKPDF 2.9",
+  "description": "Phần mềm giảng dạy PDF & Bảng xanh thông minh — Tác giả: Nguyễn Đức Hiền & Trần Văn Thiện Ngọc",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0b6251",
+  "theme_color": "#0b6251",
+  "icons": [
+    {
+      "src": "./icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "updatedAt": "2026-11-28 15:42:12",
+  "grades": {
+    "10": [
+      {
+        "title": "13-2k11 De",
+        "fileName": "13-2k11_De.pdf",
+        "topic": "",
+        "sizeKb": 732,
+        "url": "./de_vat_ly/lop_10/13-2k11_De.pdf",
+        "hdgUrl": "./de_vat_ly/lop_10/13-2k11_HDG.pdf",
+        "answersUrl": "./de_vat_ly/lop_10/13-2k11_answers.json"
+      },
+      {
+        "title": "TS1010 De",
+        "fileName": "TS1010_De.pdf",
+        "topic": "",
+        "sizeKb": 1185,
+        "url": "./de_vat_ly/lop_10/TS1010_De.pdf",
+        "hdgUrl": "./de_vat_ly/lop_10/TS1010_HDG.pdf",
+        "answersUrl": "./de_vat_ly/lop_10/TS1010_answers.json"
+      }
+    ],
+    "11": [],
+    "12": []
+  }
+}

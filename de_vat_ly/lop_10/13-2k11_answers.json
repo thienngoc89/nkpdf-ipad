@@ -1,0 +1,57 @@
+{
+  "title": "13-2k11",
+  "part1": [
+    "B",
+    "C",
+    "B",
+    "B",
+    "C",
+    "D",
+    "B",
+    "B",
+    "C",
+    "D",
+    "B",
+    "B",
+    "D",
+    "D",
+    "B",
+    "B",
+    "B",
+    "B"
+  ],
+  "part2": [
+    {
+      "a": true,
+      "b": false,
+      "c": true,
+      "d": false
+    },
+    {
+      "a": true,
+      "b": true,
+      "c": true,
+      "d": false
+    },
+    {
+      "a": true,
+      "b": false,
+      "c": true,
+      "d": true
+    },
+    {
+      "a": true,
+      "b": true,
+      "c": false,
+      "d": false
+    }
+  ],
+  "part3": [
+    "60,3",
+    "2,83",
+    "0",
+    "34,5",
+    "20",
+    "90"
+  ]
+}

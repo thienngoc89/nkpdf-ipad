@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mô phỏng Con lắc lò xo & Dao động điều hòa — Lớp Lý Thầy Ngọc</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: "Segoe UI", system-ui, sans-serif; }
+  body { background: #0B192C; color: #F8FAFC; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+  .header { background: #1E3E62; padding: 8px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #38BDF8; }
+  .header h2 { font-size: 15px; color: #FEF08A; }
+  .main { flex: 1; display: flex; gap: 10px; padding: 10px; overflow: hidden; }
+  .canvas-box { flex: 1; background: #0F172A; border: 1px solid #334155; border-radius: 10px; position: relative; }
+  canvas { width: 100%; height: 100%; display: block; }
+  .controls { width: 290px; background: #1E293B; border: 1px solid #475569; border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
+  .ctrl-row { display: flex; flex-direction: column; gap: 3px; font-size: 12.5px; }
+  .ctrl-row label { display: flex; justify-content: space-between; font-weight: 600; color: #BAE6FD; }
+  input[type=range] { width: 100%; accent-color: #38BDF8; }
+  .btns { display: flex; gap: 6px; margin-top: 4px; }
+  button { flex: 1; padding: 8px; border-radius: 7px; border: none; font-weight: 700; cursor: pointer; font-size: 12.5px; }
+  .btn-play { background: #10B981; color: #052E16; }
+  .btn-reset { background: #F59E0B; color: #0F172A; }
+  .readout { background: #0F172A; border: 1px solid #334155; border-radius: 8px; padding: 8px 10px; font-size: 12px; line-height: 1.65; }
+  .readout b { color: #FEF08A; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <h2>🌀 MÔ PHỎNG CON LẮC LÒ XO & ĐỒ THỊ DAO ĐỘNG ĐIỀU HÒA (VẬT LÍ 11) — LỚP LÝ THẦY NGỌC</h2>
+    <span style="font-size:12px;color:#BAE6FD">x = A·cos(ωt + φ)</span>
+  </div>
+  <div class="main">
+    <div class="canvas-box">
+      <canvas id="simCanvas"></canvas>
+    </div>
+    <div class="controls">
+      <div class="ctrl-row">
+        <label><span>Biên độ A (cm):</span><span id="lblA">8.0 cm</span></label>
+        <input type="range" id="slA" min="2" max="14" step="0.5" value="8" />
+      </div>
+      <div class="ctrl-row">
+        <label><span>Độ cứng lò xo k (N/m):</span><span id="lblK">40 N/m</span></label>
+        <input type="range" id="slK" min="10" max="100" step="5" value="40" />
+      </div>
+      <div class="ctrl-row">
+        <label><span>Khối lượng vật m (kg):</span><span id="lblM">0.40 kg</span></label>
+        <input type="range" id="slM" min="0.1" max="2.0" step="0.05" value="0.4" />
+      </div>
+      <div class="ctrl-row">
+        <label><span>Pha ban đầu φ (rad):</span><span id="lblPhi">0</span></label>
+        <input type="range" id="slPhi" min="-3.14" max="3.14" step="0.2618" value="0" />
+      </div>
+      <div class="btns">
+        <button class="btn-play" id="btnToggle">⏸ Tạm dừng</button>
+        <button class="btn-reset" id="btnReset">↺ Đặt lại t=0</button>
+      </div>
+      <div class="readout" id="readoutBox"></div>
+    </div>
+  </div>
+<script>
+  const canvas = document.getElementById('simCanvas');
+  const ctx = canvas.getContext('2d');
+  let running = true, t = 0, lastTs = performance.now();
+  const slA = document.getElementById('slA'), slK = document.getElementById('slK'), slM = document.getElementById('slM'), slPhi = document.getElementById('slPhi');
+  let history = [];
+
+  function resize() {
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = canvas.clientWidth * dpr;
+    canvas.height = canvas.clientHeight * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  document.getElementById('btnToggle').addEventListener('click', (e) => {
+    running = !running;
+    e.target.textContent = running ? '⏸ Tạm dừng' : '▶ Tiếp tục';
+  });
+  document.getElementById('btnReset').addEventListener('click', () => { t = 0; history = []; });
+
+  function loop(now) {
+    const dt = Math.min(0.05, (now - lastTs) / 1000);
+    lastTs = now;
+    const A = parseFloat(slA.value), k = parseFloat(slK.value), m = parseFloat(slM.value), phi = parseFloat(slPhi.value);
+    const omega = Math.sqrt(k / m);
+    const T = (2 * Math.PI) / omega;
+
+    document.getElementById('lblA').textContent = A.toFixed(1) + ' cm';
+    document.getElementById('lblK').textContent = k.toFixed(0) + ' N/m';
+    document.getElementById('lblM').textContent = m.toFixed(2) + ' kg';
+    document.getElementById('lblPhi').textContent = (phi / Math.PI).toFixed(2) + 'π rad';
+
+    if (running) {
+      t += dt;
+      const x = A * Math.cos(omega * t + phi);
+      const v = -A * omega * Math.sin(omega * t + phi);
+      history.push({ t, x, v });
+      if (history.length > 360) history.shift();
+    }
+
+    const x = A * Math.cos(omega * t + phi);
+    const v = -A * omega * Math.sin(omega * t + phi);
+    const a = -omega * omega * x;
+    const W = 0.5 * k * (A * 0.01) ** 2;
+    const Wt = 0.5 * k * (x * 0.01) ** 2;
+    const Wd = Math.max(0, W - Wt);
+
+    document.getElementById('readoutBox').innerHTML =
+      `<b>ω = ${omega.toFixed(2)} rad/s</b> | <b>T = ${T.toFixed(2)} s</b><br>` +
+      `Thời gian t = <b>${t.toFixed(2)} s</b><br>` +
+      `Li độ x = <b>${x.toFixed(2)} cm</b><br>` +
+      `Vận tốc v = <b>${v.toFixed(1)} cm/s</b><br>` +
+      `Gia tốc a = <b>${(a * 0.01).toFixed(2)} m/s²</b><br>` +
+      `Động năng Wđ = <b>${(Wd * 1000).toFixed(1)} mJ</b><br>` +
+      `Thế năng Wt = <b>${(Wt * 1000).toFixed(1)} mJ</b><br>` +
+      `Cơ năng W = <b>${(W * 1000).toFixed(1)} mJ</b>`;
+
+    const Wc = canvas.clientWidth, Hc = canvas.clientHeight;
+    ctx.clearRect(0, 0, Wc, Hc);
+
+    // 1. Vẽ Con lắc lò xo ngang ở nửa trên
+    const wallX = 50, eqX = Wc * 0.45, topY = Hc * 0.25, pxPerCm = 11;
+    const massX = eqX + x * pxPerCm;
+
+    // Mặt sàn & vị trí cân bằng O
+    ctx.strokeStyle = '#475569'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(wallX, topY + 26); ctx.lineTo(Wc - 30, topY + 26); ctx.stroke();
+    ctx.strokeStyle = '#64748B'; ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.moveTo(eqX, topY - 45); ctx.lineTo(eqX, topY + 45); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#FEF08A'; ctx.font = 'bold 13px sans-serif';
+    ctx.fillText('O (VTCB)', eqX - 24, topY + 44);
+    ctx.fillText('-A', eqX - A * pxPerCm - 8, topY + 44);
+    ctx.fillText('+A', eqX + A * pxPerCm - 8, topY + 44);
+
+    // Tường cố định
+    ctx.strokeStyle = '#94A3B8'; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(wallX, topY - 35); ctx.lineTo(wallX, topY + 26); ctx.stroke();
+
+    // Lò xo ziczac
+    const coils = 16, spLen = Math.max(40, massX - 26 - wallX);
+    ctx.strokeStyle = '#38BDF8'; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.moveTo(wallX, topY);
+    for (let i = 1; i <= coils; i++) {
+      const cx = wallX + (spLen * (i - 0.5)) / coils;
+      const cy = topY + (i % 2 === 0 ? -13 : 13);
+      ctx.lineTo(cx, cy);
+    }
+    ctx.lineTo(massX - 26, topY);
+    ctx.stroke();
+
+    // Vật nặng m
+    ctx.fillStyle = '#F59E0B'; ctx.strokeStyle = '#FEF08A'; ctx.lineWidth = 2;
+    ctx.fillRect(massX - 26, topY - 24, 52, 48);
+    ctx.strokeRect(massX - 26, topY - 24, 52, 48);
+    ctx.fillStyle = '#0F172A'; ctx.font = 'bold 14px sans-serif';
+    ctx.fillText('m', massX - 6, topY + 5);
+
+    // Vectơ lực kéo về F = -kx
+    if (Math.abs(x) > 0.3) {
+      const fx = massX - x * 6.5;
+      ctx.strokeStyle = '#FB7185'; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.moveTo(massX, topY - 32); ctx.lineTo(fx, topY - 32); ctx.stroke();
+      ctx.fillStyle = '#FB7185';
+      ctx.fillText('F⃗kv', (massX + fx) * 0.5 - 10, topY - 38);
+    }
+
+    // 2. Vẽ đồ thị x(t) ở nửa dưới
+    const gx0 = 60, gy0 = Hc * 0.72, gw = Wc - 100, gh = Hc * 0.22;
+    ctx.strokeStyle = '#64748B'; ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(gx0, gy0 - gh); ctx.lineTo(gx0, gy0 + gh);
+    ctx.moveTo(gx0, gy0); ctx.lineTo(gx0 + gw, gy0);
+    ctx.stroke();
+    ctx.fillStyle = '#BAE6FD'; ctx.font = 'bold 12px sans-serif';
+    ctx.fillText('Li độ x (cm)', gx0 + 8, gy0 - gh + 12);
+    ctx.fillText('t (s)', gx0 + gw - 24, gy0 - 6);
+
+    if (history.length > 1) {
+      ctx.strokeStyle = '#34D399'; ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      for (let i = 0; i < history.length; i++) {
+        const px = gx0 + (i / 360) * gw;
+        const py = gy0 - (history[i].x / 15) * gh;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+    }
+
+    // Thanh năng lượng Wđ / Wt
+    const barX = Wc - 180, barY = 22, barW = 140, barH = 14;
+    const wdRatio = W > 0 ? Wd / W : 0;
+    ctx.fillStyle = '#10B981'; ctx.fillRect(barX, barY, barW * wdRatio, barH);
+    ctx.fillStyle = '#F43F5E'; ctx.fillRect(barX + barW * wdRatio, barY, barW * (1 - wdRatio), barH);
+    ctx.strokeStyle = '#F8FAFC'; ctx.strokeRect(barX, barY, barW, barH);
+    ctx.fillStyle = '#F8FAFC'; ctx.font = '11px sans-serif';
+    ctx.fillText('Xanh: Wđ | Đỏ: Wt', barX + 18, barY + 28);
+
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+</script>
+</body>
+</html>
